@@ -1,0 +1,35 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+
+# Datasets and raw archives
+data/
+*.zip
+*.tar
+*.tar.gz
+
+# Interim cached features and models
+*.npy
+*.npz
+*.pkl
+*.joblib
+*.pt
+*.onnx
+
+# YOLO runs, logs, checkpoints
+runs/
+results/models/
+*.log
+wandb/
+
+# System / IDE
+.DS_Store
+.idea/
+.vscode/
