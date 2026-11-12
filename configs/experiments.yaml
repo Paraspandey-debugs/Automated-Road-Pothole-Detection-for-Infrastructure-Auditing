@@ -1,0 +1,74 @@
+# Experiment suite configurations: E1 (models), E2 (ablation), E3 (cross-domain), E4 (audit)
+
+# E1: Classical Classification Model Benchmark
+e1:
+  models:
+    logistic_regression:
+      solver: "lbfgs"
+      max_iter: 1000
+      class_weight: "balanced"
+      param_grid:
+        C: [0.01, 0.1, 1.0, 10.0]
+
+    svm_rbf:
+      kernel: "rbf"
+      probability: true
+      class_weight: "balanced"
+      param_grid:
+        C: [0.1, 1.0, 10.0]
+        gamma: ["scale", "auto", 0.01]
+
+    random_forest:
+      n_estimators: 200
+      class_weight: "balanced"
+      n_jobs: -1
+      param_grid:
+        max_depth: [10, 20, null]
+        min_samples_split: [2, 5]
+
+    xgboost:
+      n_estimators: 200
+      learning_rate: 0.05
+      eval_metric: "logloss"
+      scale_pos_weight: "auto"
+
+# E2: Feature Ablation Study
+e2:
+  sets:
+    - name: "color_only"
+      features: ["color"]
+    - name: "color_hog"
+      features: ["color", "hog"]
+    - name: "color_hog_lbp_glcm"
+      features: ["color", "hog", "lbp", "glcm"]
+    - name: "pca_reduced"
+      features: ["color", "hog", "lbp", "glcm"]
+      apply_pca: true
+      n_components: 64
+
+# E3: Cross-Domain Generalization
+e3:
+  scenarios:
+    - name: "source_to_india"
+      train_countries: ["Japan", "US", "Czech"]
+      test_country: "India"
+    - name: "us_to_india"
+      train_countries: ["US"]
+      test_country: "India"
+    - name: "rdd_to_external"
+      train_countries: ["Japan", "US", "Czech", "India"]
+      test_country: "external"
+
+# E4: YOLOv8 Bounding Box Detection & Severity Ranking
+e4:
+  yolo:
+    model: "yolov8n.pt"
+    epochs: 50
+    imgsz: 640
+    batch: 16
+    device: 0               # 0 for CUDA GPU, 'cpu' for fallback
+  audit:
+    # Severity index = sum(box_area) / image_area
+    tertiles: [0.333, 0.666] # Low, Medium, High boundaries
+    group_by: "group_id"     # Group consecutive frames into road segments
+    metric: "spearman"       # Rank correlation with ground truth

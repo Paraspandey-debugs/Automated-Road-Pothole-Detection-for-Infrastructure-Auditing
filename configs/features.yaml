@@ -1,0 +1,28 @@
+# Hyperparameters for Classical Feature Extraction (Color, HOG, LBP, GLCM)
+color:
+  enabled: true
+  bins: [16, 16, 16]         # HSV histogram binning (16*16*16 = 4096 bins or normalized channels)
+  stats: ["mean", "std", "skew"]
+
+hog:
+  enabled: true
+  orientations: 9
+  pixels_per_cell: [16, 16]
+  cells_per_block: [2, 2]
+  block_norm: "L2-Hys"
+
+lbp:
+  enabled: true
+  points: 16
+  radius: 2
+  method: "uniform"
+
+glcm:
+  enabled: true
+  distances: [1, 3]
+  angles: [0, 0.785398, 1.570796, 2.356194] # 0, 45, 90, 135 degrees in radians
+  properties: ["contrast", "dissimilarity", "homogeneity", "energy", "correlation"]
+
+pca:
+  enabled: false
+  n_components: 64

@@ -1,0 +1,10 @@
+# YOLOv8 Object Detection Dataset Configuration
+# Relative to repository root or absolute paths
+path: data/yolo
+train: splits/train.txt
+val: splits/val.txt
+test: splits/test.txt
+
+# Single-class D40 pothole detection
+names:
+  0: pothole

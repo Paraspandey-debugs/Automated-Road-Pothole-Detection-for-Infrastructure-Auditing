@@ -1,0 +1,23 @@
+# Base project configuration and global paths
+project:
+  name: "Automated-Road-Pothole-Detection"
+  seed: 42
+
+paths:
+  raw_dir: "data/raw"
+  rdd_dir: "data/raw/rdd2022"
+  extra_dir: "data/raw/extra"
+  interim_dir: "data/interim"
+  yolo_dir: "data/yolo"
+  labels_csv: "labels.csv"
+  feature_cache_dir: "data/interim/features"
+  results_dir: "results"
+  models_dir: "results/models"
+
+preprocessing:
+  img_size: [224, 224]       # Standard input dimension for classical feature extraction
+  denoise: true              # Light bilateral filtering to suppress sensor noise
+  color_space: "HSV"
+
+hardware:
+  num_workers: 4
