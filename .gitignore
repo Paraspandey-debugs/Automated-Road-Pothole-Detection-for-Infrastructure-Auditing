@@ -10,7 +10,7 @@ env/
 venv/
 
 # Datasets and raw archives
-data/
+/data/
 *.zip
 *.tar
 *.tar.gz
