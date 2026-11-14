@@ -1,4 +1,4 @@
-.PHONY: help install clean data yolo labels splits feats e1 e2 e3 e4 all
+.PHONY: help install clean data yolo labels splits feats e1 e2 e3 e4 e5 reproduce all
 
 export PYTHONPATH := .
 PYTHON ?= python3
@@ -16,6 +16,8 @@ help:
 	@echo "  make e2          Run Experiment 2 (Feature Ablations)"
 	@echo "  make e3          Run Experiment 3 (Cross-Domain Generalization)"
 	@echo "  make e4          Run Experiment 4 (YOLOv8 Detection & Severity Audit)"
+	@echo "  make e5          Run Experiment 5 (Random Forest vs ResNet-18 Benchmark)"
+	@echo "  make reproduce   Execute master reproduction script to generate all results"
 	@echo "  make all         Execute complete end-to-end pipeline"
 
 install:
@@ -51,7 +53,13 @@ e4:
 failure:
 	$(PYTHON) experiments/failure_cases.py
 
-all: data yolo labels splits feats e1 e2 e3 failure e4
+e5:
+	$(PYTHON) experiments/compare_rf_vs_cnn.py
+
+reproduce:
+	$(PYTHON) reproduce_all_results.py
+
+all: data yolo labels splits feats e1 e2 e3 failure e4 e5 reproduce
 	@echo "Complete pothole audit pipeline finished successfully!"
 
 clean:

@@ -98,6 +98,8 @@ Grad-CAM heatmaps from ResNet-18 (`layer4`) confirm that deep convolutional repr
 ## 📂 Repository Structure
 
 ```
+├── reproduce_all_results.py  # Master script to reproduce all tables, curves & figures
+├── reproduce_all_results.sh  # Executable bash wrapper for one-command reproduction
 ├── configs/                  # Hyperparameter YAML configuration files
 │   ├── base.yaml             # Paths, preprocessing, hardware settings
 │   ├── data.yaml             # YOLO dataset configuration
@@ -108,6 +110,9 @@ Grad-CAM heatmaps from ResNet-18 (`layer4`) confirm that deep convolutional repr
 │   ├── e2_feats.py           # Multi-modal feature ablation study
 │   ├── e3_cross.py           # Cross-domain generalization benchmark
 │   ├── e4_audit.py           # YOLO detection & street severity audit
+│   ├── e5_cnn_baseline.py    # ResNet-18 deep baseline fine-tuning
+│   ├── compare_rf_vs_cnn.py  # Head-to-head benchmark: Random Forest vs ResNet-18
+│   ├── gradcam_visualizer.py # Explainable AI Grad-CAM spatial heatmaps
 │   ├── failure_cases.py      # False positive & false negative analysis
 │   └── visualize_potholes_vs_cracks.py # Potholes vs crack comparison
 ├── paper/                    # IEEE conference paper source and assets
@@ -136,7 +141,14 @@ git clone https://github.com/Paraspandey-debugs/Automated-Road-Pothole-Detection
 cd Automated-Road-Pothole-Detection-for-Infrastructure-Auditing
 pip install -r requirements.txt
 
-# 2. Run complete end-to-end pipeline via Makefile:
+# 2. Reproduce all results, tables, and publication figures:
+./reproduce_all_results.sh
+# or directly via python:
+python3 reproduce_all_results.py
+
+# 3. (Optional) Run complete end-to-end retraining from scratch:
+python3 reproduce_all_results.py --retrain
+# or via Makefile:
 make all
 
 # Or run individual stages:
