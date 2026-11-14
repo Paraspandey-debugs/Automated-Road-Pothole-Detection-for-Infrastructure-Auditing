@@ -96,6 +96,7 @@ def compute_severity_audit(
     out_table_dir: Path,
     out_fig_dir: Path,
     device: str = "0",
+    conf: float = 0.20,
 ) -> pd.DataFrame:
     try:
         from ultralytics import YOLO
@@ -128,7 +129,7 @@ def compute_severity_audit(
     for i in range(0, len(image_paths), batch_size):
         chunk = image_paths[i : i + batch_size]
         try:
-            results = model.predict(chunk, verbose=False, conf=0.25, device=device, batch=len(chunk))
+            results = model.predict(chunk, verbose=False, conf=conf, device=device, batch=len(chunk))
             for res in results:
                 boxes = res.boxes
                 if len(boxes) > 0:
@@ -263,7 +264,19 @@ def main():
     p.add_argument("--workers", type=int, default=2)
     p.add_argument("--imgsz", type=int, default=512)
     p.add_argument("--device", type=str, default="0")
-    p.add_argument("--weights", type=Path, default=Path("runs/detect/pothole_yolov8n/weights/best.pt"))
+    default_w = (
+        Path("runs/detect/pothole_yolov8n_100ep/weights/best.pt")
+        if Path("runs/detect/pothole_yolov8n_100ep/weights/best.pt").exists()
+        else Path("runs/detect/pothole_yolov8n/weights/best.pt")
+    )
+    p.add_argument("--weights", type=Path, default=default_w)
+    default_csv = (
+        Path("runs/detect/pothole_yolov8n_100ep/results.csv")
+        if Path("runs/detect/pothole_yolov8n_100ep/results.csv").exists()
+        else Path("runs/detect/pothole_yolov8n/results.csv")
+    )
+    p.add_argument("--results-csv", type=Path, default=default_csv)
+    p.add_argument("--conf", type=float, default=0.20)
     p.add_argument("--labels-csv", type=Path, default=Path("labels.csv"))
     p.add_argument("--yolo-dir", type=Path, default=Path("data/yolo"))
     p.add_argument("--tables-dir", type=Path, default=Path("results/tables"))
@@ -279,12 +292,19 @@ def main():
             device=args.device,
         )
 
-    results_csv = Path("runs/detect/pothole_yolov8n/results.csv")
-    if results_csv.exists():
-        plot_yolo_training_curves(results_csv, args.figures_dir, args.tables_dir)
+    if args.results_csv.exists():
+        plot_yolo_training_curves(args.results_csv, args.figures_dir, args.tables_dir)
 
     if args.weights.exists():
-        compute_severity_audit(args.labels_csv, args.weights, args.yolo_dir, args.tables_dir, args.figures_dir, device=args.device)
+        compute_severity_audit(
+            args.labels_csv,
+            args.weights,
+            args.yolo_dir,
+            args.tables_dir,
+            args.figures_dir,
+            device=args.device,
+            conf=args.conf,
+        )
     else:
         log.warning("Weights %s not found. Run with --train first to fine-tune.", args.weights)
 
