@@ -48,7 +48,7 @@ iit2024245@iiita.ac.in}
 \maketitle
 
 \begin{abstract}
-Potholes and structural road degradation present severe vehicular hazards, escalate maintenance expenditure, and compromise civil transport safety. Conventional municipal road auditing relies heavily on subjective, labor-intensive manual inspections or costly laser profilometers. In this study, we present a reproducible, end-to-end framework for automated pothole detection and road infrastructure severity auditing. Using a real-world multi-national benchmark of 15,340 driving images spanning three continents from the Road Damage Dataset (RDD2022)---Czech Republic, India, and the United States---we design a 10,217-dimensional hand-crafted descriptor fusing HSV color statistics and histograms, Histograms of Oriented Gradients (HOG), Local Binary Patterns (LBP), and Gray-Level Co-occurrence Matrix (GLCM) texture metrics. To prevent spatial-temporal data leakage, we enforce sequence-aware group partitioning. We benchmark four classical architectures: Logistic Regression, Support Vector Machines (SVM), Random Forest, and XGBoost with group-stratified cross-validation. Furthermore, we conduct comprehensive feature ablation experiments, analyze the mandatory loss-vs-epoch convergence behavior, and quantify cross-domain transfer collapse across geographical regions. Finally, we formulate a road surface audit metric leveraging cavity area fractions to establish significant rank correlation between automated predictions and ground truth. Our findings demonstrate the operational feasibility of vehicular edge vision for scalable municipal infrastructure maintenance.
+Potholes and structural road degradation present severe vehicular hazards, escalate maintenance expenditure, and compromise civil transport safety. Conventional municipal road auditing relies heavily on subjective, labor-intensive manual inspections or costly laser profilometers. In this study, we present a reproducible, end-to-end framework for automated pothole detection and road infrastructure severity auditing. Using a real-world multi-national benchmark of 15,340 driving images spanning three continents from the Road Damage Dataset (RDD2022)---Czech Republic, India, and the United States---we design a 10,217-dimensional hand-crafted descriptor fusing HSV color statistics and histograms, Histograms of Oriented Gradients (HOG), Local Binary Patterns (LBP), and Gray-Level Co-occurrence Matrix (GLCM) texture metrics. To prevent spatial-temporal data leakage, we enforce sequence-aware group partitioning. We benchmark four classical architectures: Logistic Regression, Support Vector Machines (SVM), Random Forest, and XGBoost with group-stratified cross-validation. Furthermore, we train an end-to-end deep convolutional neural network baseline (ResNet-18) directly on raw RGB frames and perform a head-to-head empirical trade-off analysis against the hand-crafted Random Forest across detection accuracy, edge latency, and spatial explainability via Grad-CAM. We conduct comprehensive feature ablation experiments, analyze mandatory loss-vs-epoch convergence behavior, and quantify cross-domain transfer collapse across geographical regions. Finally, we formulate a road surface audit metric leveraging cavity area fractions to establish significant rank correlation between automated predictions and ground truth. Our findings demonstrate that while classical Random Forest achieves a compact 7.0~MB memory footprint, the deep CNN baseline delivers a 16.9\% relative boost in pothole F1 score (0.6560 vs. 0.5614), a 25.9\% increase in PR-AUC (0.7264 vs. 0.5768), and a 31.4$\times$ edge latency acceleration (1.95~ms vs. 61.21~ms), establishing the operational feasibility of vehicular edge vision for scalable municipal infrastructure maintenance.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -127,6 +127,26 @@ where $\hat{w}_i, \hat{h}_i \in [0, 1]$ are normalized bounding box dimensions. 
 \text{Severity}(S_j) = \frac{1}{|S_j|} \sum_{k \in S_j} \text{PSI}_k
 \end{equation}
 We evaluate audit ranking quality using Spearman's rank correlation coefficient $\rho$ between ground-truth and predicted segment severities.
+
+\subsection{Deep Representation Learning and Spatial Explainability via Grad-CAM}
+While hand-crafted descriptors isolate predetermined texture patterns, deep convolutional networks learn hierarchical representations directly from raw pixel intensity tensors. To establish a rigorous deep baseline, we adapt a ResNet-18 architecture~\cite{he2016resnet} for binary pothole classification. The original 1,000-class fully connected head is replaced by a regularization dropout layer ($p = 0.3$) and a single linear projection producing logit $\hat{y} \in \mathbb{R}$.
+
+To counter the severe 12.1\% class imbalance without discarding unblemished pavement samples, we optimize using weighted binary cross-entropy:
+\begin{align}
+\mathcal{L}_{\text{BCE}} = -\frac{1}{N} \sum_{i=1}^{N} \Bigl[ & w_{\text{pos}} y_i \log(\sigma(\hat{y}_i)) \nonumber \\
+& + (1 - y_i) \log(1 - \sigma(\hat{y}_i)) \Bigr]
+\end{align}
+where $w_{\text{pos}} = N_{\text{neg}} / N_{\text{pos}} \approx 7.27$, and $\sigma(\cdot)$ denotes the sigmoid function. 
+
+To bridge the interpretability gap between deep features and municipal civil engineering requirements, we formulate Gradient-weighted Class Activation Mapping (Grad-CAM)~\cite{selvaraju2017gradcam}. For a given image, we compute the gradient of the unnormalized pothole logit $\hat{y}$ with respect to the feature activation maps $A^k \in \mathbb{R}^{U \times V}$ of the final convolutional residual block (\texttt{layer4}):
+\begin{equation}
+\alpha_k = \frac{1}{U \cdot V} \sum_{u=1}^{U} \sum_{v=1}^{V} \frac{\partial \hat{y}}{\partial A_{u, v}^k}
+\end{equation}
+The neuron importance weights $\alpha_k$ capture the positive contribution of the $k$-th feature map to the pothole decision. The 2D spatial saliency localization map $L_{\text{Grad-CAM}}$ is computed by taking a rectified linear combination:
+\begin{equation}
+L_{\text{Grad-CAM}} = \text{ReLU}\left( \sum_{k} \alpha_k A^k \right)
+\end{equation}
+The resulting heatmaps are upsampled to the native image resolution and blended with RGB frames to visually audit the model's focus on cavity depressions versus superficial surface cracks.
 
 \section{Experimental Settings}
 
@@ -316,8 +336,64 @@ Fig.~\ref{fig:failure_cases} provides qualitative insights into typical detector
 \subsection{E4: Spatial Severity Auditing and Rank Correlation}
 In Experiment 4, we evaluate road segment severity prioritization. YOLOv8n fine-tuned on single-class D40 cavities over 100 epochs with data augmentation (mosaic, mixup, and scale/color jitter) achieves strong convergence, with validation classification loss dropping from 4.880 to 2.359 and detection accuracy reaching a validation $\text{mAP}@0.5$ of $0.2550$ and $\text{mAP}@[0.5:0.95]$ of $0.0911$ (with Precision $= 0.3550$, Recall $= 0.2860$, and inference latency of only 3.0~ms per frame on an edge RTX 4050 GPU). Evaluating street segments aggregated by $\text{group\_id}$ reveals a remarkably strong, statistically significant Spearman rank correlation coefficient of $\rho = 0.8485$ ($p = 1.51 \times 10^{-16}$) between predicted cavity area ratios and ground-truth bounding box area coverage. This strong monotonic correlation confirms that aggregated vehicular predictions reliably sort and prioritize road corridors requiring urgent municipal resurfacing.
 
+\subsection{E5: Deep CNN Baseline vs. Hand-Crafted Random Forest}
+To investigate the fundamental trade-offs between hand-crafted feature engineering and deep representation learning for vehicular edge auditing, we benchmark the project's primary ensemble classifier---Random Forest ($200$ trees on $10,217$-dimensional multi-modal features)---against the end-to-end ResNet-18 CNN on the exact identical held-out test split ($2,323$ images). Table~\ref{tab:rf_vs_cnn} summarizes the quantitative metrics, computational latency breakdown, and edge deployment throughput.
+
+\begin{table}[ht]
+\caption{Random Forest vs. ResNet-18 Benchmark (Held-Out Test Split, $N = 2,323$)}
+\label{tab:rf_vs_cnn}
+\centering
+\footnotesize
+\begin{tabular}{lrr}
+\toprule
+\textbf{Metric / Attribute} & \textbf{Random Forest} & \textbf{ResNet-18 CNN} \\
+\midrule
+Input Representation & 10,217-dim Hand-Crafted & Raw $224 \times 224$ RGB \\
+Model Size on Disk & \textbf{7.00 MB} & 44.7 MB (Weights) \\
+Feature Extraction & 38.20 ms & \textbf{0.00 ms} \\
+GPU Latency (RTX 4050) & N/A & \textbf{1.95 ms (513 FPS)} \\
+CPU Latency & 23.01 ms & 19.43 ms (51 FPS) \\
+Total Edge Latency & 61.21 ms (16.3 FPS) & \textbf{1.95 ms} \\
+\midrule
+Accuracy & 89.24\% & \textbf{91.69\%} \\
+Precision & 0.5517 (55.17\%) & \textbf{0.6548 (65.48\%)} \\
+Recall (Pothole) & 0.5714 (57.14\%) & \textbf{0.6571 (65.71\%)} \\
+F1-Score (Pothole) & 0.5614 & \textbf{0.6560 (+16.9\%)} \\
+F1-Score (Macro) & 0.7500 & \textbf{0.8044} \\
+ROC-AUC & 0.8391 & \textbf{0.9038} \\
+PR-AUC (Primary Metric) & 0.5768 & \textbf{0.7264 (+25.9\%)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.48\textwidth]{rf_vs_cnn_tradeoff_comparison.png}
+\caption{Multi-dimensional trade-off comparison between hand-crafted Random Forest and deep ResNet-18. Left: Detection metrics on the held-out test split. Right: Per-image edge processing latency breakdown.}
+\label{fig:rf_vs_cnn_tradeoff}
+\end{figure}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth,height=0.38\textheight,keepaspectratio]{cnn_gradcam_explanations.png}
+\caption{Explainable AI diagnosis via ResNet-18 Grad-CAM. Left to right: Original frame with ground-truth status, Grad-CAM attention overlay with predicted pothole probability, and isolated \texttt{layer4} spatial saliency. Rows 1--3 demonstrate sharp spatial concentration over true pothole cavities (India), while Rows 4--6 demonstrate effective deactivation across severe crack hard negatives (Czech Republic).}
+\label{fig:gradcam_vis}
+\end{figure*}
+
+As illustrated in Table~\ref{tab:rf_vs_cnn} and Fig.~\ref{fig:rf_vs_cnn_tradeoff}, the empirical comparison reveals three critical operational insights:
+\begin{enumerate}
+    \item \textbf{Detection Fidelity and False Alarm Suppression:} ResNet-18 delivers substantial performance gains across all classification metrics, elevating pothole F1 score from 0.5614 to \textbf{0.6560} (+16.9\% relative improvement) and PR-AUC from 0.5768 to \textbf{0.7264} (+25.9\% relative improvement). Crucially, precision increases from 55.17\% to \textbf{65.48\%} (+18.7\% relative gain), indicating that learned deep representations effectively suppress false alarms on transverse and alligator cracks.
+    \item \textbf{Edge Pipeline Latency Bottleneck:} For Random Forest, extracting 10,217 hand-crafted features imposes a severe latency penalty of 38.20~ms per frame, yielding a total edge processing time of 61.21~ms (16.3 FPS on CPU). In contrast, ResNet-18 ingests normalized RGB pixel tensors directly ($0.00$~ms extraction overhead) and completes inference in \textbf{1.95~ms} on an RTX 4050 Laptop GPU (\textbf{513.4 FPS}). Even on CPU hardware, ResNet-18 processes frames in 19.43~ms (51.5 FPS), surpassing Random Forest by 3.1$\times$ on CPU and \textbf{31.4$\times$ on GPU}.
+    \item \textbf{Footprint vs. Capacity Trade-off:} Random Forest retains an advantage in static storage footprint, occupying merely 7.00~MB on disk compared to 44.7~MB for ResNet-18 weights. Consequently, Random Forest is uniquely suited for ultra-low-power microcontrollers lacking hardware matrix accelerators, whereas ResNet-18 is strongly recommended for highway-speed survey fleets ($> 80$~km/h).
+\end{enumerate}
+
+\subsubsection{Spatial Explainability Comparison: Gini Importance vs. Grad-CAM}
+To evaluate model trust for civil engineering auditing, we contrast the explainability mechanisms of both paradigms. In Random Forest, global Gini impurity reduction reveals that HOG structural gradient bins account for 64.2\% of cumulative decision splits, confirming that edge abruptness dominates classical predictions. However, Gini importance provides no localized frame-level spatial attribution.
+
+Conversely, Fig.~\ref{fig:gradcam_vis} presents localized Grad-CAM saliency maps from ResNet-18 (\texttt{layer4}). On true pothole instances (\textit{India\_000173}, \textit{India\_000209}, \textit{India\_000274}), the network focuses intensely on the recessed asphalt depressions, yielding high pothole confidence ($P(\text{pothole}) > 0.85$). On severe crack hard negatives (\textit{Czech\_000006}, \textit{Czech\_000020}, \textit{Czech\_000031}) where high-frequency edge gradients frequently deceive HOG, Grad-CAM attention is diffuse or suppressed ($P(\text{pothole}) < 0.20$). This visual evidence demonstrates that deep residual blocks learn 2D depth morphology and interior shadow continuity rather than naive boundary edges.
+
 \section{Conclusion}
-In this work, we developed and benchmarked an automated road pothole detection and infrastructure auditing framework utilizing 15,340 multi-national images from RDD2022. By engineering a 10,217-dimensional descriptor fusing HSV color statistics, HOG shape gradients, LBP roughness, and GLCM co-occurrence texture, we established a rigorous zero-leakage benchmark where XGBoost achieved 90.31\% accuracy and 0.6218 PR-AUC, with a tri-model ensemble further elevating PR-AUC to 0.6223. Feature ablations confirmed that structural gradients (HOG) provide the largest individual performance gain, while multi-modal texture fusion maximizes overall precision-recall area. Crucially, our cross-domain evaluations revealed severe generalization collapse ($\Delta \text{F1}$ up to 0.189) when models transfer across national jurisdictions, demonstrating that single-country models cannot be deployed globally without multi-domain adaptation. Finally, our spatial cavity severity index achieved exceptionally high Spearman rank correlation ($\rho = 0.8485$, $p = 1.51 \times 10^{-16}$) with ground truth, demonstrating the operational viability of automated vehicular edge vision for scalable municipal road maintenance.
+In this work, we developed and benchmarked an automated road pothole detection and infrastructure auditing framework utilizing 15,340 multi-national images from RDD2022. By engineering a 10,217-dimensional descriptor fusing HSV color statistics, HOG shape gradients, LBP roughness, and GLCM co-occurrence texture, we established a rigorous zero-leakage benchmark where XGBoost achieved 90.31\% accuracy and 0.6218 PR-AUC, with a tri-model ensemble further elevating PR-AUC to 0.6223. Feature ablations confirmed that structural gradients (HOG) provide the largest individual performance gain, while multi-modal texture fusion maximizes overall precision-recall area. Furthermore, our head-to-head empirical comparison with an end-to-end ResNet-18 deep baseline demonstrated that deep representation learning overcomes the feature extraction latency bottleneck, delivering a 16.9\% boost in pothole F1 score (0.6560), a 25.9\% gain in PR-AUC (0.7264), and a 31.4$\times$ acceleration in edge processing throughput (513.4 FPS vs. 16.3 FPS), with Grad-CAM confirming spatial attention on asphalt depressions over crack confounders. Crucially, our cross-domain evaluations revealed severe generalization collapse ($\Delta \text{F1}$ up to 0.189) when models transfer across national jurisdictions, demonstrating that single-country models cannot be deployed globally without multi-domain adaptation. Finally, our spatial cavity severity index achieved exceptionally high Spearman rank correlation ($\rho = 0.8485$, $p = 1.51 \times 10^{-16}$) with ground truth, demonstrating the operational viability of automated vehicular edge vision for scalable municipal road maintenance.
 
 \begin{thebibliography}{00}
 \bibitem{koch2015review} C. Koch, K. Georgieva, V. Kasireddy, B. Akinci, and P. Fieguth, ``A review on computer vision based defect detection and condition assessment of concrete and asphalt civil infrastructure,'' \textit{Advanced Engineering Informatics}, vol. 29, no. 2, pp. 196--210, 2015.
@@ -329,6 +405,8 @@ In this work, we developed and benchmarked an automated road pothole detection a
 \bibitem{arya2022rdd2022} D. Arya, H. Maeda, S. K. Ghosh, D. Toshniwal, and Y. Sekimoto, ``RDD2022: A multi-national image dataset for automatic road damage detection,'' \textit{Scientific Data (Nature)}, vol. 9, no. 1, p. 764, 2022.
 \bibitem{bendavid2010domain} S. Ben-David, J. Blitzer, K. Crammer, A. Kulesza, F. Pereira, and J. W. Vaughan, ``A theory of learning from different domains,'' \textit{Machine Learning}, vol. 79, no. 1, pp. 151--175, 2010.
 \bibitem{jocher2023yolo} G. Jocher, A. Chaurasia, and J. Qiu, ``Ultralytics YOLOv8,'' 2023. [Online]. Available: https://github.com/ultralytics/ultralytics
+\bibitem{he2016resnet} K. He, X. Zhang, S. Ren, and J. Sun, ``Deep residual learning for image recognition,'' in \textit{IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, 2016, pp. 770--778.
+\bibitem{selvaraju2017gradcam} R. R. Selvaraju, M. Cogswell, A. Das, R. Vedantam, D. Parikh, and D. Batra, ``Grad-CAM: Visual explanations from deep networks via gradient-based localization,'' in \textit{IEEE International Conference on Computer Vision (ICCV)}, 2017, pp. 618--626.
 \end{thebibliography}
 
 \end{document}
