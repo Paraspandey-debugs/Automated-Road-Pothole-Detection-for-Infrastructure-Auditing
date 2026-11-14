@@ -1,0 +1,2 @@
+loss,accuracy,precision,recall,f1_pothole,f1_macro,roc_auc,pr_auc,model,best_val_epoch,best_val_pr_auc
+1.6489,0.9169,0.6548,0.6571,0.656,0.8044,0.9038,0.7264,ResNet-18 (Deep Baseline),22,0.6836

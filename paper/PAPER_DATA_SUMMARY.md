@@ -134,3 +134,42 @@ Trained with Mosaic (1.0), Mixup (0.1), scale/color jitter on an RTX 4050 GPU (1
 | `potholes_vs_cracks_comparison.png` | Qualitative inspection: clear potholes vs tough hairline crack hard negatives | `results/figures/potholes_vs_cracks_comparison.png` |
 | `yolo100_pothole_vs_crack_inference.png` | YOLO 100-epoch visual detections on potholes and cracks | `results/figures/yolo100_pothole_vs_crack_inference.png` |
 | `failure_cases.png` | Qualitative failure grid (False Positives and False Negatives) | `results/figures/failure_cases.png` |
+| `e5_cnn_training_curves.png` | ResNet-18 training loss and validation PR-AUC progression over 25 epochs | `results/figures/e5_cnn_training_curves.png` |
+| `rf_vs_cnn_pr_curves.png` | Precision-Recall curve comparison: Random Forest vs ResNet-18 | `results/figures/rf_vs_cnn_pr_curves.png` |
+| `rf_vs_cnn_roc_curves.png` | ROC curve comparison: Random Forest vs ResNet-18 | `results/figures/rf_vs_cnn_roc_curves.png` |
+| `rf_vs_cnn_confusion_matrices.png` | Side-by-side Confusion Matrices: Hand-Crafted RF vs Deep ResNet-18 | `results/figures/rf_vs_cnn_confusion_matrices.png` |
+| `rf_vs_cnn_tradeoff_comparison.png` | Dual-panel bar chart: Detection accuracy vs edge latency breakdown | `results/figures/rf_vs_cnn_tradeoff_comparison.png` |
+| `cnn_gradcam_explanations.png` | Explainable AI: Grad-CAM attention on true potholes vs crack hard negatives | `results/figures/cnn_gradcam_explanations.png` |
+
+---
+
+## 8. Experiment 5: Deep CNN Baseline (ResNet-18) vs. Hand-Crafted Random Forest
+
+Evaluated on the exact identical held-out test split (2,323 images: 280 potholes, 2,043 normal/crack roads) with identical group-stratified zero-leakage sequence splitting.
+
+### Table 6: Head-to-Head Comparison: Random Forest vs. ResNet-18
+| Metric / Characteristic | Hand-Crafted Random Forest (Baseline) | Deep ResNet-18 (Deep Baseline) | Relative Advantage ($\Delta$) |
+|---|---|---|---|
+| **Input Representation** | 10,217-dim Hand-Crafted (HOG+LBP+GLCM+HSV) | Raw $224 \times 224$ RGB Images | End-to-end representation learning |
+| **Model Size on Disk** | **7.00 MB** | 128.04 MB (checkpoint) / 44.7 MB (weights) | RF is 6.4× more compact |
+| **Feature Extraction Time** | 38.20 ms / image | **0.00 ms** (raw pixel input) | ResNet-18 eliminates preprocessing |
+| **Inference Latency (GPU)** | N/A (CPU only) | **1.95 ms** (RTX 4050 Laptop GPU) | **513.4 FPS** real-time throughput |
+| **Inference Latency (CPU)** | 23.01 ms / image | 19.43 ms / image | Comparable pure inference on CPU |
+| **Total Edge Latency** | 61.21 ms / image (16.3 FPS) | **1.95 ms** (513.4 FPS GPU) / 19.43 ms (CPU) | **31.4× faster end-to-end on GPU** |
+| **Accuracy** | 0.8924 (89.24\%) | **0.9169 (91.69\%)** | +2.45\% absolute |
+| **Precision** | 0.5517 (55.17\%) | **0.6548 (65.48\%)** | **+18.7\% relative (+0.1031)** |
+| **Recall (Pothole)** | 0.5714 (57.14\%) | **0.6571 (65.71\%)** | **+15.0\% relative (+0.0857)** |
+| **F1-Score (Pothole)** | 0.5614 | **0.6560** | **+16.9\% relative (+0.0946)** |
+| **F1-Score (Macro)** | 0.7500 | **0.8044** | +7.3\% relative (+0.0544) |
+| **ROC-AUC** | 0.8391 | **0.9038** | +7.7\% relative (+0.0647) |
+| **PR-AUC (Critical Metric)** | 0.5768 | **0.7264** | **+25.9\% relative (+0.1496)** |
+
+### Explainability Comparison:
+1. **Random Forest (Global Tabular Feature Attribution):**
+   - Evaluated via Mean Decrease in Impurity (Gini importance) across 200 trees.
+   - Reveals that HOG structural gradient bins (especially high-frequency gradient magnitudes at image margins and central cells) dominate 64.2\% of the cumulative decision splits, confirming that edge abruptness is the primary classical discriminator.
+2. **ResNet-18 (Local Spatial Saliency via Grad-CAM):**
+   - Extracted from final residual block (`layer4`), global-average pooled and backpropagated w.r.t the pothole logit.
+   - For true potholes (`India_000173`, `India_000209`, `India_000274`), attention is tightly and intensely focused on the bowl-shaped asphalt depressions ($P(\text{pothole}) > 0.85$).
+   - For severe crack hard negatives (`Czech_000006`, `Czech_000020`, `Czech_000031`), heatmaps are diffuse or completely suppress activation ($P(\text{pothole}) < 0.20$), demonstrating that convolutional kernels learn 2D depth and shadow continuity rather than naive edge presence.
+
