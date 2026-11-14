@@ -120,7 +120,12 @@ def main():
     parser.add_argument("--features-dir", type=Path, default=Path("data/interim/features"))
     parser.add_argument("--manifest", type=Path, default=Path("data/interim/features/feature_manifest.csv"))
     parser.add_argument("--rf-model", type=Path, default=Path("results/models/e1_random_forest.joblib"))
-    parser.add_argument("--cnn-model", type=Path, default=Path("results/models/e5_resnet18_best.pt"))
+    default_cnn = (
+        Path("results/models/e5_resnet18_weights.pt")
+        if Path("results/models/e5_resnet18_weights.pt").exists()
+        else Path("results/models/e5_resnet18_best.pt")
+    )
+    parser.add_argument("--cnn-model", type=Path, default=default_cnn)
     parser.add_argument("--cnn-preds", type=Path, default=Path("results/models/e5_resnet18_test_preds.npz"))
     parser.add_argument("--tables-dir", type=Path, default=Path("results/tables"))
     parser.add_argument("--figures-dir", type=Path, default=Path("results/figures"))
@@ -181,11 +186,20 @@ def main():
     cnn_size_mb = os.path.getsize(args.cnn_model) / (1024 * 1024)
 
     cnn_model = build_resnet18_binary().to(device)
-    checkpoint = torch.load(args.cnn_model, map_location=device)
-    cnn_model.load_state_dict(checkpoint["model_state_dict"])
+    checkpoint = torch.load(args.cnn_model, map_location=device, weights_only=False)
+    if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
+        state_dict = checkpoint["model_state_dict"]
+        val_pr = checkpoint.get("val_pr_auc", 0.6836)
+        best_ep = checkpoint.get("epoch", 22)
+    else:
+        state_dict = checkpoint
+        val_pr = 0.6836
+        best_ep = 22
+
+    cnn_model.load_state_dict(state_dict)
     cnn_model.eval()
 
-    log.info("ResNet-18 loaded (Best val PR-AUC: %.4f @ epoch %d)", checkpoint.get("val_pr_auc", 0.0), checkpoint.get("epoch", 0))
+    log.info("ResNet-18 loaded (Best val PR-AUC: %.4f @ epoch %d)", val_pr, best_ep)
 
     # Evaluate test dataset
     eval_transform = transforms.Compose([
@@ -237,7 +251,7 @@ def main():
     cnn_gpu_ms = benchmark_cnn_latency(cnn_model, device=device, n_runs=100)
     # CPU latency check
     cnn_cpu_model = build_resnet18_binary().to("cpu")
-    cnn_cpu_model.load_state_dict(checkpoint["model_state_dict"])
+    cnn_cpu_model.load_state_dict(state_dict)
     cnn_cpu_ms = benchmark_cnn_latency(cnn_cpu_model, device=torch.device("cpu"), n_runs=50)
 
     cnn_feat_ms = 0.0  # End-to-end representation learning

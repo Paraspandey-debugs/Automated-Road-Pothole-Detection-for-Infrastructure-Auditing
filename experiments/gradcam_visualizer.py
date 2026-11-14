@@ -98,7 +98,12 @@ def build_resnet18_binary() -> nn.Module:
 
 def main():
     parser = argparse.ArgumentParser(description="Generate Grad-CAM Explainability Visualizations.")
-    parser.add_argument("--model-path", type=Path, default=Path("results/models/e5_resnet18_best.pt"))
+    default_model = (
+        Path("results/models/e5_resnet18_weights.pt")
+        if Path("results/models/e5_resnet18_weights.pt").exists()
+        else Path("results/models/e5_resnet18_best.pt")
+    )
+    parser.add_argument("--model-path", type=Path, default=default_model)
     parser.add_argument("--manifest", type=Path, default=Path("data/interim/features/feature_manifest.csv"))
     parser.add_argument("--out-path", type=Path, default=Path("results/figures/cnn_gradcam_explanations.png"))
     parser.add_argument("--device", type=str, default="cuda:0" if torch.cuda.is_available() else "cpu")
@@ -113,8 +118,12 @@ def main():
         raise FileNotFoundError(f"Model checkpoint not found at {args.model_path}")
 
     model = build_resnet18_binary().to(device)
-    checkpoint = torch.load(args.model_path, map_location=device)
-    model.load_state_dict(checkpoint["model_state_dict"])
+    checkpoint = torch.load(args.model_path, map_location=device, weights_only=False)
+    if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
+        state_dict = checkpoint["model_state_dict"]
+    else:
+        state_dict = checkpoint
+    model.load_state_dict(state_dict)
     model.eval()
     log.info("Model loaded successfully from %s", args.model_path)
 

@@ -113,7 +113,11 @@ def reproduce_visual_inspections() -> None:
 def reproduce_e5_rf_vs_cnn(retrain: bool = False) -> None:
     """Runs Experiment 5: Head-to-Head Comparison (Random Forest vs. ResNet-18)."""
     cnn_train_script = ROOT_DIR / "experiments" / "e5_cnn_baseline.py"
-    best_cnn_weights = ROOT_DIR / "results" / "models" / "e5_resnet18_best.pt"
+    best_cnn_weights = (
+        ROOT_DIR / "results" / "models" / "e5_resnet18_weights.pt"
+        if (ROOT_DIR / "results" / "models" / "e5_resnet18_weights.pt").exists()
+        else ROOT_DIR / "results" / "models" / "e5_resnet18_best.pt"
+    )
 
     if retrain or not best_cnn_weights.exists():
         run_cmd([sys.executable, str(cnn_train_script), "--epochs", "25", "--batch-size", "32"], "ResNet-18 Deep Baseline Training")

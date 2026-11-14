@@ -47,8 +47,6 @@ labels.csv
 *.npy
 *.npz
 *.pkl
-*.joblib
-*.pt
 *.pth
 *.onnx
 *.weights
@@ -56,17 +54,29 @@ labels.csv
 *.engine
 weights/
 
+# Allow classical models and pure deep learning weights
+!results/models/e1_logistic_regression.joblib
+!results/models/e1_svm.joblib
+!results/models/e1_random_forest.joblib
+!results/models/e1_xgboost.joblib
+!results/models/e5_resnet18_weights.pt
+!results/models/yolov8n_pothole_100ep.pt
+
 # ==============================================================================
 # Experiment Tracking, Runs, Logs & Checkpoints
 # ==============================================================================
 runs/
-results/models/
 results/errors/
 *.log
 wandb/
 .comet/
 mlruns/
 lightning_logs/
+
+# Exclude full training checkpoints (>100MB with optimizer states) and redundant backups
+results/models/e5_resnet18_best.pt
+results/models/e1_random_forest_backup.joblib
+yolov8n.pt
 
 # ==============================================================================
 # LaTeX Build Artifacts

@@ -265,9 +265,13 @@ def main():
     p.add_argument("--imgsz", type=int, default=512)
     p.add_argument("--device", type=str, default="0")
     default_w = (
-        Path("runs/detect/pothole_yolov8n_100ep/weights/best.pt")
-        if Path("runs/detect/pothole_yolov8n_100ep/weights/best.pt").exists()
-        else Path("runs/detect/pothole_yolov8n/weights/best.pt")
+        Path("results/models/yolov8n_pothole_100ep.pt")
+        if Path("results/models/yolov8n_pothole_100ep.pt").exists()
+        else (
+            Path("runs/detect/pothole_yolov8n_100ep/weights/best.pt")
+            if Path("runs/detect/pothole_yolov8n_100ep/weights/best.pt").exists()
+            else Path("runs/detect/pothole_yolov8n/weights/best.pt")
+        )
     )
     p.add_argument("--weights", type=Path, default=default_w)
     default_csv = (
