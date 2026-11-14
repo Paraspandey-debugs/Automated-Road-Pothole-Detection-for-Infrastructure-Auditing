@@ -162,12 +162,12 @@
 
 All visual and tabular assets have been saved directly to the repository and are ready for citation:
 
-1. **Training Loss & PR-AUC Curves:** [`results/figures/e5_cnn_training_curves.png`](file:///home/hyperghost/github/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing/results/figures/e5_cnn_training_curves.png)
-2. **Precision-Recall Curves Comparison:** [`results/figures/rf_vs_cnn_pr_curves.png`](file:///home/hyperghost/github/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing/results/figures/rf_vs_cnn_pr_curves.png)
-3. **ROC Curves Comparison:** [`results/figures/rf_vs_cnn_roc_curves.png`](file:///home/hyperghost/github/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing/results/figures/rf_vs_cnn_roc_curves.png)
-4. **Side-by-Side Confusion Matrices:** [`results/figures/rf_vs_cnn_confusion_matrices.png`](file:///home/hyperghost/github/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing/results/figures/rf_vs_cnn_confusion_matrices.png)
-5. **Multi-Dimensional Trade-off Bar Chart:** [`results/figures/rf_vs_cnn_tradeoff_comparison.png`](file:///home/hyperghost/github/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing/results/figures/rf_vs_cnn_tradeoff_comparison.png)
-6. **Grad-CAM Visual Explanations (6-sample grid):** [`results/figures/cnn_gradcam_explanations.png`](file:///home/hyperghost/github/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing/results/figures/cnn_gradcam_explanations.png)
-7. **Numeric Comparison Table:** [`results/tables/rf_vs_cnn_comparison.csv`](file:///home/hyperghost/github/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing/results/tables/rf_vs_cnn_comparison.csv)
-8. **ResNet-18 Best Checkpoint:** [`results/models/e5_resnet18_best.pt`](file:///home/hyperghost/github/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing/results/models/e5_resnet18_best.pt)
-9. **Random Forest Preserved Model:** [`results/models/e1_random_forest.joblib`](file:///home/hyperghost/github/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing/results/models/e1_random_forest.joblib) & [`results/models/e1_random_forest_backup.joblib`](file:///home/hyperghost/github/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing/results/models/e1_random_forest_backup.joblib)
+1. **Training Loss & PR-AUC Curves:** `results/figures/e5_cnn_training_curves.png`
+2. **Precision-Recall Curves Comparison:** `results/figures/rf_vs_cnn_pr_curves.png`
+3. **ROC Curves Comparison:** `results/figures/rf_vs_cnn_roc_curves.png`
+4. **Side-by-Side Confusion Matrices:** `results/figures/rf_vs_cnn_confusion_matrices.png`
+5. **Multi-Dimensional Trade-off Bar Chart:** `results/figures/rf_vs_cnn_tradeoff_comparison.png`
+6. **Grad-CAM Visual Explanations (6-sample grid):** `results/figures/cnn_gradcam_explanations.png`
+7. **Numeric Comparison Table:** `results/tables/rf_vs_cnn_comparison.csv`
+8. **ResNet-18 Best Checkpoint:** `results/models/e5_resnet18_best.pt`
+9. **Random Forest Preserved Model:** `results/models/e1_random_forest.joblib` & `results/models/e1_random_forest_backup.joblib`

@@ -103,12 +103,12 @@ Trained with Mosaic (1.0), Mixup (0.1), scale/color jitter on an RTX 4050 GPU (1
 ### Table 5: YOLOv8 Training Comparison (10 vs 100 Epochs)
 | Evaluation Metric | 10 Epochs Baseline | **100 Epochs Final** | Relative Improvement |
 |---|---|---|---|
-| **mAP@0.5** | 0.1152 | **0.2550** | **+121.4\% (2.2× boost)** |
-| **mAP@0.5:0.95** | 0.0388 | **0.0911** | **+134.8\% (2.3× boost)** |
-| **Precision** | 0.2022 | **0.3550** | **+75.6\%** |
-| **Recall** | 0.1835 | **0.2860** | **+55.9\%** |
-| **Validation Cls Loss** | 2.0029 | **2.3595** (Stable) | Well regularized |
-| **Validation Box Loss** | 1.4298 | **1.5661** (Augmented) | Sharp bounding |
+| **mAP@0.5** | 0.1152 | **0.2718 (0.271)** | **+135.9\% (2.4× boost)** |
+| **mAP@0.5:0.95** | 0.0388 | **0.0948** | **+144.3\% (2.4× boost)** |
+| **Precision** | 0.2022 | **0.4210** | **+108.2\%** |
+| **Recall** | 0.1835 | **0.2749** | **+49.8\%** |
+| **Validation Cls Loss** | 2.0029 | **2.1180** (Stable) | Well regularized |
+| **Validation Box Loss** | 1.4298 | **1.5516** (Augmented) | Sharp bounding |
 | **Severity Audit Correlation ($\rho$)** | $\approx 0.00$ | **0.8485** ($p = 1.51 \times 10^{-16}$) | **Highly reliable sorting** |
 | **Inference Latency** | 7.8 ms | **3.0 ms** | **~330 FPS** |
 

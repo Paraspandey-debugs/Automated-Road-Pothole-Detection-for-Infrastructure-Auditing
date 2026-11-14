@@ -27,14 +27,29 @@ Municipal pavement auditing traditionally depends on manual visual surveys or ex
 | Model | Accuracy | Precision | Recall | F1 Pothole | F1 Macro | ROC-AUC | PR-AUC |
 |---|---|---|---|---|---|---|---|
 | **Logistic Regression** | 84.72% | 0.4051 | 0.5714 | 0.4741 | 0.6923 | 0.8112 | 0.4445 |
-| **SVM (Linear Hinge)** | 86.27% | 0.4316 | 0.4393 | 0.4354 | 0.6786 | 0.7935 | 0.3708 |
+| **Linear SVM (Hinge)** | 86.27% | 0.4316 | 0.4393 | 0.4354 | 0.6786 | 0.7935 | 0.3708 |
 | **Random Forest** | 89.24% | 0.5517 | 0.5714 | 0.5614 | 0.7500 | 0.8391 | 0.5768 |
-| **XGBoost (Best Single)** | **90.31%** | **0.6132** | 0.5321 | 0.5698 | **0.7576** | **0.8646** | 0.6218 |
-| **Tri-Model Ensemble** | 89.88% | 0.5782 | 0.5679 | **0.5730** | 0.7542 | 0.8592 | **0.6223** |
+| **XGBoost (Best Single)** | **90.31%** | **0.6132** | 0.5321 | **0.5698** | **0.7576** | **0.8646** | **0.6218** |
+
+### Head-to-Head Comparison: Random Forest vs. ResNet-18 Deep Baseline
+| Metric / Characteristic | Hand-Crafted Random Forest | Deep ResNet-18 Baseline | Relative Difference ($\Delta$) |
+|---|---|---|---|
+| **Input Representation** | 10,217-dim Hand-Crafted (HOG+LBP+GLCM+HSV) | Raw $224 \times 224$ RGB Pixels | End-to-End Representation |
+| **Model Size on Disk** | **7.00 MB** | 44.7 MB (Weights) | RF is 6.4× more compact |
+| **Feature Extraction Time** | 38.20 ms / frame | **0.00 ms / frame** | ResNet-18 eliminates preprocessing |
+| **Inference Latency (GPU)** | N/A (CPU only) | **1.95 ms / frame** (RTX 4050) | **513.4 FPS** throughput |
+| **Total Edge Latency** | 61.21 ms / frame (16.3 FPS) | **1.95 ms / frame (513.4 FPS)** | **31.4× faster on GPU** |
+| **Accuracy** | 89.24% | **91.69%** | +2.45% absolute |
+| **Precision** | 55.17% | **65.48%** | **+18.7% relative (+0.1031)** |
+| **Recall (Pothole)** | 57.14% | **65.71%** | **+15.0% relative (+0.0857)** |
+| **F1-Score (Pothole)** | 0.5614 | **0.6560** | **+16.9% relative (+0.0946)** |
+| **ROC-AUC** | 0.8391 | **0.9038** | +7.7% relative (+0.0647) |
+| **PR-AUC (Primary Metric)**| 0.5768 | **0.7264** | **+25.9% relative (+0.1496)** |
 
 ### YOLOv8n Detection & Infrastructure Severity Audit (100 Epochs)
-- **mAP@0.5:** **0.2550** (Up from 0.1152 in baseline, **+121.4% gain**)
-- **mAP@0.5:0.95:** **0.0911** (Up from 0.0388, **+134.8% gain**)
+- **Validation mAP@0.5:** **0.2718 (0.271)** (Up from 0.1152 in baseline, **+135.9% gain**)
+- **Validation mAP@0.5:0.95:** **0.0948** (Up from 0.0388, **+144.3% gain**)
+- **Precision / Recall:** **0.4210** / **0.2749**
 - **Inference Latency:** **3.0 ms / frame** on RTX 4050 GPU (~330 FPS)
 - **Infrastructure Audit Spearman Rank Correlation:** **$\rho = 0.8485$** ($p = 1.51 \times 10^{-16}$)
 
@@ -57,12 +72,12 @@ Municipal pavement auditing traditionally depends on manual visual surveys or ex
 │   └── visualize_potholes_vs_cracks.py # Potholes vs crack comparison
 ├── paper/                    # IEEE conference paper source and assets
 │   ├── main.tex              # Complete IEEEtran LaTeX manuscript
-│   ├── main.pdf              # Compiled 6-page paper PDF
 │   ├── references.bib        # BibTeX bibliography
-│   └── PAPER_DATA_SUMMARY.md # Master data & metrics reference for paper writing
+│   ├── PAPER_DATA_SUMMARY.md # Master data & metrics reference for paper writing
+│   └── CNN_BASELINE_OBSERVATIONS.md # Comprehensive run observations & RF vs CNN benchmark
 ├── results/                  # Generated figures, tables, and serialized models
 │   ├── figures/              # Publication figures (PR curves, loss curves, audits)
-│   ├── models/               # Trained .joblib classical classifiers
+│   ├── models/               # Trained .joblib classical classifiers & PyTorch weights
 │   └── tables/               # Exported CSV result tables
 ├── scripts/
 │   └── draw_pipeline.py      # Architecture flow diagram generator
@@ -77,7 +92,7 @@ Municipal pavement auditing traditionally depends on manual visual surveys or ex
 
 ```bash
 # 1. Clone repository and install dependencies
-git clone https://github.com/hyperghost/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing.git
+git clone https://github.com/Paraspandey-debugs/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing.git
 cd Automated-Road-Pothole-Detection-for-Infrastructure-Auditing
 pip install -r requirements.txt
 

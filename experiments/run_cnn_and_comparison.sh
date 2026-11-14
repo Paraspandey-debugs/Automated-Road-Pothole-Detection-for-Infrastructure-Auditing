@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-REPO_DIR="/home/hyperghost/github/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_DIR"
 
 mkdir -p runs results/models results/tables results/figures
