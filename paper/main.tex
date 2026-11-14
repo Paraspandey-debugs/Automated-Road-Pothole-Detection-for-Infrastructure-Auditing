@@ -1,412 +1,331 @@
-\documentclass[conference,nofonttune]{IEEEtran}
+\documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
 
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
-\usepackage{algorithmic}
 \usepackage{graphicx}
-\graphicspath{{../results/figures/}{results/figures/}{../}}
+\graphicspath{{figs/}}
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{booktabs}
 \usepackage{multirow}
-\usepackage{url}
-
-\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
-    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
 
 \begin{document}
 
-\title{Automated Road Pothole Detection and Spatial Severity Auditing via Hand-Crafted Feature Fusion and Deep Representations}
+\title{Pothole Detection for Road Auditing:\\ Hand-Crafted and Deep Features Across Countries}
 
-\author{
-\IEEEauthorblockN{Paras Pandey}
-\IEEEauthorblockA{\textit{Dept. of Information Technology} \\
-\textit{IIIT Allahabad}\\
-Prayagraj, India \\
-iit2024235@iiita.ac.in}
-\and
-\IEEEauthorblockN{Chandan Sapkale}
-\IEEEauthorblockA{\textit{Dept. of Information Technology} \\
-\textit{IIIT Allahabad}\\
-Prayagraj, India \\
-iit2024258@iiita.ac.in}
-\and
-\IEEEauthorblockN{Neel Ghule}
-\IEEEauthorblockA{\textit{Dept. of Information Technology} \\
-\textit{IIIT Allahabad}\\
-Prayagraj, India \\
-iit2024266@iiita.ac.in}
-\and
-\IEEEauthorblockN{Kavyan Hemrom}
-\IEEEauthorblockA{\textit{Dept. of Information Technology} \\
-\textit{IIIT Allahabad}\\
-Prayagraj, India \\
-iit2024245@iiita.ac.in}
+\author{\IEEEauthorblockN{Paras Pandey, Chandan Sapkale, Neel Ghule, and Kavyan Hemrom}
+\IEEEauthorblockA{\textit{Department of Information Technology} \\
+\textit{Indian Institute of Information Technology Allahabad}, Prayagraj, India \\
+\{iit2024235, iit2024258, iit2024266, iit2024245\}@iiita.ac.in}
 }
 
 \maketitle
 
 \begin{abstract}
-Potholes and structural road degradation present severe vehicular hazards, escalate maintenance expenditure, and compromise civil transport safety. Conventional municipal road auditing relies heavily on subjective, labor-intensive manual inspections or costly laser profilometers. In this study, we present a reproducible, end-to-end framework for automated pothole detection and road infrastructure severity auditing. Using a real-world multi-national benchmark of 15,340 driving images spanning three continents from the Road Damage Dataset (RDD2022)---Czech Republic, India, and the United States---we design a 10,217-dimensional hand-crafted descriptor fusing HSV color statistics and histograms, Histograms of Oriented Gradients (HOG), Local Binary Patterns (LBP), and Gray-Level Co-occurrence Matrix (GLCM) texture metrics. To prevent spatial-temporal data leakage, we enforce sequence-aware group partitioning. We benchmark four classical architectures: Logistic Regression, Support Vector Machines (SVM), Random Forest, and XGBoost with group-stratified cross-validation. Furthermore, we train an end-to-end deep convolutional neural network baseline (ResNet-18) directly on raw RGB frames and perform a head-to-head empirical trade-off analysis against the hand-crafted Random Forest across detection accuracy, edge latency, and spatial explainability via Grad-CAM. We conduct comprehensive feature ablation experiments, analyze mandatory loss-vs-epoch convergence behavior, and quantify cross-domain transfer collapse across geographical regions. Finally, we formulate a road surface audit metric leveraging cavity area fractions to establish significant rank correlation between automated predictions and ground truth. Our findings demonstrate that while classical Random Forest achieves a compact 7.0~MB memory footprint, the deep CNN baseline delivers a 16.9\% relative boost in pothole F1 score (0.6560 vs. 0.5614), a 25.9\% increase in PR-AUC (0.7264 vs. 0.5768), and a 31.4$\times$ edge latency acceleration (1.95~ms vs. 61.21~ms), establishing the operational feasibility of vehicular edge vision for scalable municipal infrastructure maintenance.
+Road authorities still find most potholes through manual surveys or citizen complaints, which are slow and hard to scale. We study automatic pothole detection from vehicle-camera images using 15,340 images of the public RDD2022 dataset from India, the Czech Republic and the United States, with an emphasis on honest evaluation: data are split by capture-sequence blocks, scores are reported against class prevalence, and generalization is tested on a country unseen in training. We compare four classical classifiers on a 10,217-dimensional hand-crafted descriptor (colour, HOG, LBP and GLCM), a fine-tuned ResNet-18, and a YOLOv8n detector whose boxes give a road-segment severity score. On a held-out test split, XGBoost reaches a PR-AUC of 0.62 and ResNet-18 reaches 0.73, against a chance level of 0.12, and HOG gradients are the most useful hand-crafted cue. When the classical models are trained on Czech and US roads and tested on Indian roads, their PR-AUC is only 1.0 to 1.4 times the chance level, compared with 1.2 to 3.9 times in-domain; accuracy and fixed-threshold F1 hide this loss. The detector reaches 0.27 mAP50, and its segment-severity ranking agrees strongly with the annotations when all segments are pooled (Spearman 0.85) but less within a single country (0.13 to 0.64). We discuss the limits of these findings and release our code.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Pothole Detection, Feature Fusion, Domain Generalization, Road Damage Auditing, Machine Learning, Computer Vision.
+pothole detection, road damage, domain shift, hand-crafted features, convolutional neural networks, infrastructure auditing
 \end{IEEEkeywords}
 
+%% ------------------------------------------------------------------
 \section{Introduction}
-Roadway networks are fundamental to civil commerce, mobility, and economic activity. However, environmental weathering, precipitation, heavy vehicular axle loads, and thermal stress induce constant structural wear, culminating in potholes and pavement fatigue~\cite{koch2015review}. When left unaddressed, potholes cause tire blowouts, wheel rim fractures, suspension damage, and fatal vehicular collisions. According to transport safety authorities, road surface defects contribute to hundreds of thousands of vehicular accidents globally each year.
+Potholes damage vehicles, cause accidents and become more expensive to repair the longer they go unnoticed. Road authorities typically learn about them from manual surveys or citizen complaints, which are slow, subjective and difficult to scale over a large road network. A camera mounted on a vehicle already produces road images continuously, so an automatic detector could turn those images into a cheap and repeatable infrastructure audit.
 
-Historically, civil infrastructure management has relied on dedicated visual surveys conducted by municipal personnel or specialized sensor vans equipped with expensive laser profilometers~\cite{fan2020pothole}. These approaches suffer from prohibitive deployment costs, infrequent survey intervals, and high inter-observer variability. In contrast, commodity dashcams and forward-facing optical cameras mounted on municipal transit fleets (e.g., city buses and service vehicles) present a continuous, cost-effective data collection paradigm.
+The difficulty is that lighting, shadows, water, asphalt texture, camera height and country all change how a road looks, and harmless features such as cracks, patches and manholes resemble potholes. A model that works on one set of roads may fail on another, and accuracy-style metrics can hide this because potholes appear in only a small minority of images.
 
-Nevertheless, automated optical road condition auditing presents substantial technical hurdles:
-\begin{enumerate}
-    \item \textbf{Environmental Heterogeneity:} Pavement surfaces exhibit dramatic lighting fluctuations, dynamic tree shadows, overexposed glare, water reflections, and sensor vantage variations.
-    \item \textbf{Structural Confounders:} Pothole cavities share visual morphology with harmless artifacts such as manholes, expansion joints, recent bitumen patches, and harmless dark stains. Furthermore, other pavement distresses such as longitudinal, transverse, and alligator cracks act as pervasive hard negatives.
-    \item \textbf{Geographical Domain Shift:} Asphalt aggregate composition, road markings, lighting angles, and climate differ fundamentally across countries, causing models trained in one jurisdiction to suffer severe performance degradation when tested on unseen roads~\cite{bendavid2010domain}.
-    \item \textbf{Auditing vs. Binary Classification:} Municipal asset management requires not merely binary image classification (``pothole present''), but spatial localization and segment-level severity grading to rank roads for maintenance prioritization.
-\end{enumerate}
+This paper therefore asks three questions. (i) How well do classical features and models, a fine-tuned CNN, and a detector perform on a realistic multi-country benchmark? (ii) Which hand-crafted cues matter? (iii) Do the results survive a change of country? Our contributions are:
+\begin{itemize}
+\item A reproducible benchmark on RDD2022 with sequence-block grouped splits, four classical models, a ResNet-18 baseline and a YOLOv8n detector on the same held-out data, with a feature ablation and training curves.
+\item A cross-country study that reports PR-AUC normalized by class prevalence (\emph{lift}) and shows that fixed-threshold F1 is misleading when prevalence changes between countries.
+\item A segment-level severity audit built on detector boxes, with an analysis of how a pooled correlation can overstate ranking quality.
+\end{itemize}
 
-To rigorously address these requirements, this paper establishes a zero-leakage classical machine learning benchmark, performs multi-modal descriptor ablation, assesses cross-domain generalization collapse, and demonstrates segment-level severity auditing.
+%% ------------------------------------------------------------------
+\section{Related Work}
+\textbf{Classical pothole detection.} Early image-based methods segmented dark, textured regions and applied shape and texture rules to find potholes in asphalt images~\cite{koch2011pothole}; Koch \textit{et al.} reviewed the field~\cite{koch2015review}. Fan \textit{et al.} model the road surface from stereo disparity~\cite{fan2020pothole}. Generic descriptors such as HOG~\cite{dalal2005hog}, LBP~\cite{ojala2002lbp} and GLCM statistics~\cite{haralick1973glcm}, fed to SVMs~\cite{cortes1995svm}, random forests~\cite{breiman2001random} or boosted trees~\cite{chen2016xgboost}, form the classical pipelines that preceded deep learning, and our baseline follows this design.
+
+\textbf{Deep road-damage detection.} Maeda \textit{et al.} trained object detectors on smartphone road images for several damage types~\cite{maeda2018road}. RDD2022 extends this line to several countries~\cite{arya2022rdd2022}, and earlier work examined training and testing across countries~\cite{arya2021deep}. Single-stage YOLO detectors~\cite{redmon2016yolo,jocher2023yolo} are a common choice for real-time use.
+
+\textbf{Dataset shift and evaluation.} Models trained on one data source often degrade on another~\cite{torralba2011bias,bendavid2010domain}. On imbalanced data, precision--recall analysis is more informative than ROC analysis~\cite{saito2015precision}, and a PR-AUC is only meaningful relative to the prevalence, which is the expected PR-AUC of a random ranker; we therefore normalize PR-AUC by prevalence.
+
+%% ------------------------------------------------------------------
+\section{Methodology}
+Fig.~\ref{fig:pipeline} summarizes the three branches.
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.92\textwidth]{pipeline_architecture.pdf}
-\caption{End-to-end framework for automated pothole detection and infrastructure auditing. Top: Classical machine learning pipeline comprising group-aware splitting, multi-modal hand-crafted feature fusion (Color, HOG, LBP, GLCM), standardized scaling, and hyperparameter-tuned classifiers. Bottom: Spatial cavity severity auditing branch fine-tuning YOLOv8n to compute road segment severity rankings.}
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  blk/.style={draw,rounded corners=2pt,align=center,font=\scriptsize,minimum height=1.8cm,text width=2.45cm,inner sep=2pt,line width=0.6pt},
+  gen/.style={blk,fill=blue!6,draw=blue!50!black},
+  cla/.style={blk,fill=orange!12,draw=orange!70!black},
+  dee/.style={blk,fill=green!10,draw=green!45!black},
+  aud/.style={blk,fill=violet!10,draw=violet!60!black},
+  evl/.style={blk,fill=red!8,draw=red!55!black},
+  lab/.style={font=\scriptsize\bfseries,anchor=south west,inner sep=1pt},
+  arr/.style={-{Stealth[length=4pt]},line width=0.7pt,draw=black!70}
+]
+% inputs
+\node[gen] (data) at (0,0) {\textbf{RDD2022}\\India, Czech, US\\15,340 images\\positive: $\geq$1 D40 box};
+\node[gen] (split) at (3.0,0) {\textbf{Grouped split}\\50-frame blocks\\70 / 15 / 15\\train / val / test\\no shared block};
+% (A) classical
+\node[cla] (a1) at (6.1,2.75) {\textbf{Preprocess}\\resize $224{\times}224$\\bilateral filter};
+\node[cla] (a2) at (9.0,2.75) {\textbf{Hand-crafted features}\\HSV colour: 4,105\\HOG: 6,084\\LBP: 18, GLCM: 10\\total: 10,217-d};
+\node[cla] (a3) at (11.9,2.75) {\textbf{Classifiers}\\scaler fit on train\\LR, linear SVM,\\RF, XGBoost};
+% (B) deep
+\node[dee] (b1) at (6.1,0) {\textbf{Raw RGB input}\\$224{\times}224$\\flip, rotate,\\colour jitter};
+\node[dee] (b2) at (9.0,0) {\textbf{ResNet-18}\\ImageNet init.\\dropout + 1 logit};
+\node[dee] (b3) at (11.9,0) {\textbf{Training}\\weighted BCE, AdamW\\25 epochs\\keep best val PR-AUC};
+% (C) detection
+\node[aud] (c1) at (6.1,-2.75) {\textbf{Box labels}\\D40 boxes in\\YOLO format};
+\node[aud] (c2) at (9.0,-2.75) {\textbf{YOLOv8n}\\single class (D40)\\100 epochs};
+\node[aud] (c3) at (11.9,-2.75) {\textbf{Severity audit}\\$s_i=\sum_j w_j h_j$\\mean per segment\\Spearman $\rho$};
+% outputs
+\node[evl] (ev) at (14.8,0) {\textbf{Evaluation}\\same test split\\PR-AUC, F1, recall\\training curves\\lift $=$ PR-AUC$/\pi$};
+\node[cla] (x1) at (14.8,2.75) {\textbf{Cross-country}\\train US / Czech\\test all India\\3 seeds, lift};
+% branch labels
+\node[lab,orange!60!black] at ($(a1.north west)+(0,0.06)$) {(A) Classical ML branch};
+\node[lab,green!35!black] at ($(b1.north west)+(0,0.06)$) {(B) Deep CNN branch};
+\node[lab,violet!60!black] at ($(c1.north west)+(0,0.06)$) {(C) Detection and audit branch};
+% arrows
+\draw[arr] (data) -- (split);
+\coordinate (fork) at ($(split.east)+(0.3,0)$);
+\draw[line width=0.7pt,draw=black!70] (split.east) -- (fork);
+\draw[arr] (fork) |- (a1.west);
+\draw[arr] (fork) -- (b1.west);
+\draw[arr] (fork) |- (c1.west);
+\draw[arr] (a1) -- (a2); \draw[arr] (a2) -- (a3); \draw[arr] (a3) -- (x1);
+\draw[arr] (b1) -- (b2); \draw[arr] (b2) -- (b3); \draw[arr] (b3) -- (ev);
+\draw[arr] (c1) -- (c2); \draw[arr] (c2) -- (c3);
+\draw[arr] (a3.south) |- ($(ev.north)+(-0.5,0.45)$) -- ($(ev.north)+(-0.5,0)$);
+\draw[arr] (c3.north) |- ($(ev.south)+(-0.5,-0.45)$) -- ($(ev.south)+(-0.5,0)$);
+\end{tikzpicture}}
+\caption{Overview of the study. One grouped split feeds three branches: (A) hand-crafted features with four classifiers, (B) an end-to-end ResNet-18, and (C) a YOLOv8n detector whose boxes give a per-segment severity score. All branches are scored on the same held-out test split; the classical models are additionally trained on US and Czech images and tested on India.}
 \label{fig:pipeline}
 \end{figure*}
 
-\section{Related Work}
-\subsection{Classical Vision and Texture-Based Road Defect Detection}
-Prior to deep learning, vision-based road surface inspection primarily utilized digital image processing and hand-crafted texture descriptors~\cite{koch2015review}. Dalal and Triggs~\cite{dalal2005hog} introduced Histograms of Oriented Gradients (HOG) to capture edge distributions and local shape contours, which was adapted by early pothole detectors to identify the elliptical closed boundaries characteristic of pavement cavities. 
+\subsection{Data and Splits}
+We use the annotated training portion of RDD2022~\cite{arya2022rdd2022} for India, the Czech Republic and the United States. An image is labelled \emph{pothole} if it contains at least one D40 box; all other images, including those with only cracks (D00, D10, D20), are negatives. Images are split 70/15/15 into train, validation and test sets by group, where a group is a block of 50 consecutive file indices from one country, and the split is stratified by whether a group contains a pothole. No group is shared across partitions, so near-duplicate frames of one road cannot appear on both sides of a split; an automatic check enforces this. The grouping is a filename-based proxy for capture sequence that we could not verify against capture metadata.
 
-To quantify surface roughness, Ojala et al.~\cite{ojala2002lbp} introduced Local Binary Patterns (LBP), demonstrating strong invariance to monotonic illumination changes. Haralick et al.~\cite{haralick1973glcm} formulated the Gray-Level Co-occurrence Matrix (GLCM), defining spatial second-order statistical measures including contrast, dissimilarity, homogeneity, energy, and correlation. Koch et al.~\cite{koch2015review} surveyed vision techniques and noted that while individual texture descriptors capture localized asphalt degradation, single modalities are vulnerable to non-uniform road textures, highlighting the necessity of multi-modal descriptor fusion.
+\subsection{Hand-Crafted Features}
+Each image is resized to $224\times224$ and denoised with a bilateral filter. We extract (i) HSV colour moments (mean, standard deviation and skewness per channel) and a $16^3$-bin HSV histogram (4,105 values); (ii) HOG on the grey image with 9 orientations, $16\times16$-pixel cells and $2\times2$-cell blocks (6,084 values); (iii) uniform rotation-invariant LBP with $P{=}16$, $R{=}2$ (18 values); and (iv) five GLCM statistics (contrast, dissimilarity, homogeneity, energy, correlation) summarized by their mean and standard deviation over two distances and four angles (10 values). The concatenated 10,217-dimensional vector is standardized with statistics from the training split only.
 
-\subsection{Ensemble Learning and Modern Classifiers}
-For tabular and feature-engineered representations, gradient boosted decision trees and support vector machines remain highly competitive with deep networks. Chen and Guestrin~\cite{chen2016xgboost} introduced XGBoost, an efficient, scalable implementation of gradient boosted trees that incorporates second-order Taylor approximations of the loss function and shrinkage regularization. Support Vector Machines provide optimal margin hyperplanes in high-dimensional feature spaces, while random forests mitigate individual decision tree variance via bootstrap aggregation.
+\subsection{Classifiers}
+We evaluate logistic regression (LR), a linear SVM trained by stochastic gradient descent with hinge loss~\cite{cortes1995svm}, a random forest (RF)~\cite{breiman2001random} and XGBoost~\cite{chen2016xgboost}, using scikit-learn~\cite{pedregosa2011scikit}. LR, SVM and RF are tuned by 3-fold grouped cross-validation on the training split, maximizing F1. XGBoost uses fixed settings (200 trees, learning rate 0.05) and a positive-class weight equal to the negative-to-positive ratio of the training set (7.27). The SVM is therefore linear, not the RBF-kernel SVM of our original plan.
 
-\subsection{Road Damage Datasets and Covariate Shift}
-The release of the Road Damage Dataset (RDD2022) by Arya et al.~\cite{arya2022rdd2022} provided a standardized multi-national benchmark spanning Japan, India, the Czech Republic, Norway, the United States, and China, containing over 47,000 images annotated with VOC bounding boxes across four damage types: longitudinal cracks (D00), transverse cracks (D10), alligator cracks (D20), and potholes (D40). Crucially, multi-national benchmarks reveal that models evaluated on independent country subsets suffer substantial performance drops due to domain shift~\cite{bendavid2010domain}.
+\subsection{ResNet-18 Baseline}
+A ResNet-18~\cite{he2016resnet} initialized with ImageNet weights~\cite{deng2009imagenet} receives $224\times224$ RGB images with random horizontal flips, $\pm10^\circ$ rotations and colour jitter. Its classifier is replaced by dropout (0.3) and a single logit, trained with binary cross-entropy whose positive class is weighted by 7.27, using AdamW~\cite{loshchilov2019decoupled} (learning rate $10^{-4}$, weight decay $10^{-3}$, cosine schedule) for 25 epochs. The checkpoint with the best validation PR-AUC is evaluated on the test split. Grad-CAM~\cite{selvaraju2017gradcam} is used for qualitative inspection.
 
-\section{Methodology}
-The proposed pipeline comprises image preprocessing, hand-crafted feature extraction, standardized scaling, classifier training with group-aware cross-validation, cross-domain generalization evaluation, and spatial severity auditing, as illustrated in Fig.~\ref{fig:pipeline}.
-
-\subsection{Preprocessing and Image Conditioning}
-Input road images are standardized to a fixed spatial dimension of $224 \times 224$ pixels using area-based interpolation. To attenuate high-frequency sensor noise and camera sensor artifacts while preserving sharp asphalt edges and cavity boundaries, we apply edge-preserving bilateral filtering:
+\subsection{Detection and Severity Audit}
+YOLOv8n~\cite{jocher2023yolo} is fine-tuned from pretrained weights as a single-class (D40) detector for 100 epochs with mosaic and mixup augmentation. For frame $i$ with predicted boxes of normalized width $w_j$ and height $h_j$ (confidence $\geq 0.20$), the frame severity
 \begin{equation}
-I_{\text{filtered}}(p) = \frac{1}{W_p} \sum_{q \in \Omega} I(q) \, g_{\sigma_s}(\|p - q\|) \, g_{\sigma_r}(\|I(p) - I(q)\|)
+s_i=\sum_j w_j h_j \label{eq:sev}
 \end{equation}
-where $\Omega$ denotes the spatial neighborhood, $g_{\sigma_s}$ denotes the spatial Gaussian kernel ($\sigma_s = 50$), and $g_{\sigma_r}$ denotes the radiometric range kernel ($\sigma_r = 50$).
+is the fraction of image area covered by potholes. The severity of a segment (one group) is the mean of $s_i$ over its frames, and the ground-truth severity is computed in the same way from the annotated boxes. We measure agreement with Spearman's $\rho$ over the segments of the test split, since a maintenance plan depends on the order of segments rather than on absolute values.
 
-\subsection{Multi-Modal Hand-Crafted Feature Fusion}
-We construct a unified 10,217-dimensional hand-crafted feature vector $\mathbf{x} = [\mathbf{f}_{\text{color}}^\top, \mathbf{f}_{\text{HOG}}^\top, \mathbf{f}_{\text{LBP}}^\top, \mathbf{f}_{\text{GLCM}}^\top]^\top$:
-\begin{enumerate}
-    \item \textbf{Color and Photometric Cues ($\mathbf{f}_{\text{color}} \in \mathbb{R}^{4105}$):} Road surface color captures wet moisture, shadowed asphalt, and oil residues. We convert images to the HSV color space and extract the first three statistical moments (mean $\mu$, standard deviation $\sigma$, and skewness $\gamma$) for each channel ($3 \times 3 = 9$ features). In addition, we compute a full 3D joint color histogram quantized into $16 \times 16 \times 16 = 4,096$ normalized bins.
-    \item \textbf{Structural Gradients via HOG ($\mathbf{f}_{\text{HOG}} \in \mathbb{R}^{6084}$):} Potholes exhibit distinctive semicircular or irregular rim gradients. Over the grayscale image, we compute horizontal and vertical Sobel gradients, binning orientations into 9 angular bins across $16 \times 16$ pixel cells. Blocks of $2 \times 2$ cells are normalized using the L2-Hys norm, yielding $9 \times (13 \times 13) \times 4 = 6,084$ dimensions.
-    \item \textbf{Surface Micro-Texture via LBP ($\mathbf{f}_{\text{LBP}} \in \mathbb{R}^{18}$):} To capture localized surface roughness versus smooth unblemished bitumen, we compute rotation-invariant uniform Local Binary Patterns using $P = 16$ circularly symmetric neighbors at radius $R = 2.0$. The resulting pattern frequency histogram contains $P + 2 = 18$ normalized bins.
-    \item \textbf{Spatial Gray-Level Co-occurrence via GLCM ($\mathbf{f}_{\text{GLCM}} \in \mathbb{R}^{10}$):} To evaluate second-order spatial gray-level dependencies, images are quantized into 64 gray levels. We construct symmetric co-occurrence matrices $P(i, j | d, \theta)$ across pixel distances $d \in \{1, 3\}$ and orientations $\theta \in \{0^\circ, 45^\circ, 90^\circ, 135^\circ\}$. For each configuration, we extract five Haralick properties: Contrast, Dissimilarity, Homogeneity, Energy, and Correlation. We compute the mean and standard deviation across all distance-angle pairs, producing 10 dimensions.
-\end{enumerate}
-
-\subsection{Zero-Leakage Group-Aware Splitting and Standardization}
-Driving survey cameras capture sequential frames at 10--30 Hz. Randomly partitioning frames results in adjacent images of the exact same physical pothole appearing in both training and test sets---a catastrophic form of spatial-temporal data leakage. To ensure valid generalization, we partition images by capture session and sequence prefixes ($\text{group\_id}$ derived from filename sequencing blocks of 50 consecutive frames). 
-
-We verify zero group overlap:
+\subsection{Evaluation Protocol}
+We report accuracy, precision, recall and F1 of the pothole class, ROC-AUC and PR-AUC. A random ranker obtains an expected PR-AUC equal to the prevalence $\pi$, so we also report the lift
 \begin{equation}
-\mathcal{G}_{\text{train}} \cap \mathcal{G}_{\text{val}} = \emptyset, \quad \mathcal{G}_{\text{train}} \cap \mathcal{G}_{\text{test}} = \emptyset, \quad \mathcal{G}_{\text{val}} \cap \mathcal{G}_{\text{test}} = \emptyset
+L=\mathrm{PR\text{-}AUC}/\pi, \label{eq:lift}
 \end{equation}
-The feature scaler (StandardScaler) is strictly fit on the training split $\mathbf{X}_{\text{train}}$ only, and subsequently applied to $\mathbf{X}_{\text{val}}$ and $\mathbf{X}_{\text{test}}$.
+where $L=1$ means chance. Lift makes scores comparable between test sets whose prevalence differs, as in our cross-country experiment. For cross-country transfer we train on source countries only, hold out 20\% of the source groups as an in-domain test set, and test on all India images, repeating this for three random seeds.
 
-\subsection{Object Detection and Road Severity Auditing}
-While classical classification determines pothole presence, infrastructure auditing requires quantifying defect severity. We define the frame-level Pothole Severity Index (PSI) as the fraction of road image surface area consumed by pothole cavities:
-\begin{equation}
-\text{PSI} = \frac{\sum_{i=1}^{K} (w_i \cdot h_i)}{W_{\text{img}} \cdot H_{\text{img}}} = \sum_{i=1}^{K} \hat{w}_i \hat{h}_i
-\end{equation}
-where $\hat{w}_i, \hat{h}_i \in [0, 1]$ are normalized bounding box dimensions. Frame-level severities are aggregated per road segment $S_j$:
-\begin{equation}
-\text{Severity}(S_j) = \frac{1}{|S_j|} \sum_{k \in S_j} \text{PSI}_k
-\end{equation}
-We evaluate audit ranking quality using Spearman's rank correlation coefficient $\rho$ between ground-truth and predicted segment severities.
-
-\subsection{Deep Representation Learning and Spatial Explainability via Grad-CAM}
-While hand-crafted descriptors isolate predetermined texture patterns, deep convolutional networks learn hierarchical representations directly from raw pixel intensity tensors. To establish a rigorous deep baseline, we adapt a ResNet-18 architecture~\cite{he2016resnet} for binary pothole classification. The original 1,000-class fully connected head is replaced by a regularization dropout layer ($p = 0.3$) and a single linear projection producing logit $\hat{y} \in \mathbb{R}$.
-
-To counter the severe 12.1\% class imbalance without discarding unblemished pavement samples, we optimize using weighted binary cross-entropy:
-\begin{align}
-\mathcal{L}_{\text{BCE}} = -\frac{1}{N} \sum_{i=1}^{N} \Bigl[ & w_{\text{pos}} y_i \log(\sigma(\hat{y}_i)) \nonumber \\
-& + (1 - y_i) \log(1 - \sigma(\hat{y}_i)) \Bigr]
-\end{align}
-where $w_{\text{pos}} = N_{\text{neg}} / N_{\text{pos}} \approx 7.27$, and $\sigma(\cdot)$ denotes the sigmoid function. 
-
-To bridge the interpretability gap between deep features and municipal civil engineering requirements, we formulate Gradient-weighted Class Activation Mapping (Grad-CAM)~\cite{selvaraju2017gradcam}. For a given image, we compute the gradient of the unnormalized pothole logit $\hat{y}$ with respect to the feature activation maps $A^k \in \mathbb{R}^{U \times V}$ of the final convolutional residual block (\texttt{layer4}):
-\begin{equation}
-\alpha_k = \frac{1}{U \cdot V} \sum_{u=1}^{U} \sum_{v=1}^{V} \frac{\partial \hat{y}}{\partial A_{u, v}^k}
-\end{equation}
-The neuron importance weights $\alpha_k$ capture the positive contribution of the $k$-th feature map to the pothole decision. The 2D spatial saliency localization map $L_{\text{Grad-CAM}}$ is computed by taking a rectified linear combination:
-\begin{equation}
-L_{\text{Grad-CAM}} = \text{ReLU}\left( \sum_{k} \alpha_k A^k \right)
-\end{equation}
-The resulting heatmaps are upsampled to the native image resolution and blended with RGB frames to visually audit the model's focus on cavity depressions versus superficial surface cracks.
-
+%% ------------------------------------------------------------------
 \section{Experimental Settings}
-
-\subsection{Dataset Composition and Class Balance}
-Our study utilizes 15,340 real-world driving images from three diverse geographical regions in the RDD2022 repository~\cite{arya2022rdd2022}. Table~\ref{tab:dataset_eda} provides the per-country breakdown. The dataset exhibits realistic class imbalance: overall, only 11.73\% of frames contain potholes (class D40), while 47.59\% contain non-pothole cracks (longitudinal D00, transverse D10, alligator D20) serving as hard negatives, and 37.01\% represent undamaged road surfaces.
-
-\begin{table}[h]
-\caption{RDD2022 Multi-National Dataset Statistics}
-\label{tab:dataset_eda}
-\centering
-\small
-\begin{tabular}{lrrrrr}
-\toprule
-\textbf{Country} & \textbf{Total} & \textbf{Pothole} & \textbf{D40} & \textbf{Hard} & \textbf{Normal} \\
- & \textbf{Images} & \textbf{Images} & \textbf{Boxes} & \textbf{Negatives} & \textbf{Images} \\
-\midrule
-Czech Republic & 2,829 & 154 (5.4\%) & 197 & 918 & 1,757 \\
-India & 7,706 & 1,530 (19.8\%) & 3,187 & 1,693 & 3,921 \\
-United States & 4,805 & 116 (2.4\%) & 135 & 4,689 & 0 \\
-\midrule
-\textbf{Total} & \textbf{15,340} & \textbf{1,800 (11.7\%)} & \textbf{3,519} & \textbf{7,300} & \textbf{5,678} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Partitioning and Cross-Validation Setup}
-In-domain experiments follow a 70/15/15 group-aware partition: 10,668 training images (1,290 potholes, 12.09\%), 2,349 validation images (230 potholes, 9.79\%), and 2,323 test images (280 potholes, 12.05\%). Hyperparameter tuning uses 3-fold GroupKFold cross-validation on the training set.
-
-Cross-domain generalization evaluates geographical transfer:
-\begin{itemize}
-    \item \textbf{Scenario 1 (West $\to$ India):} Source training on combined United States and Czech Republic subsets (6,490 train, 1,144 in-domain val), evaluated on India (7,706 target images).
-    \item \textbf{Scenario 2 (US $\to$ India):} Source training exclusively on United States (3,844 train, 961 val), evaluated on India.
-    \item \textbf{Scenario 3 (Czech $\to$ India):} Source training exclusively on Czech Republic (2,263 train, 566 val), evaluated on India.
-\end{itemize}
-To provide statistically sound estimates, all cross-domain experiments are repeated across three independent random seeds $\{42, 123, 456\}$, and we report Mean $\pm$ Standard Deviation.
-
-\subsection{Hardware and Implementation Details}
-Experiments were executed on an Intel system utilizing 11 multiprocessing workers and an NVIDIA GeForce RTX 4050 Laptop GPU (6 GB VRAM) running PyTorch 2.14.0+cu130. Optimization libraries include Scikit-learn 1.3, XGBoost 2.0, and Ultralytics YOLOv8.
-
-\section{Results and Discussion}
-
-\subsection{E1: Classical Classification Model Benchmark}
-Table~\ref{tab:e1_results} summarizes the performance of the four classical models on the held-out test split (2,323 images) under group-aware partitioning. XGBoost achieves the highest overall accuracy (90.31\%), pothole F1 score (0.5698), PR-AUC (0.6218), and ROC-AUC (0.8646), outperforming both linear and kernel baselines. Random Forest demonstrates competitive performance with an F1 score of 0.5614 and higher pothole recall (57.14\%).
-
-\begin{table}[h]
-\caption{Experiment 1: Classical Classifier Benchmark (Held-out Test Split)}
-\label{tab:e1_results}
-\centering
-\small
-\begin{tabular}{lrrrrrr}
-\toprule
-\textbf{Model} & \textbf{Acc.} & \textbf{Prec.} & \textbf{Recall} & \textbf{F1} & \textbf{PR-AUC} & \textbf{ROC-AUC} \\
-\midrule
-Logistic Regression & 84.7\% & 0.405 & 0.571 & 0.474 & 0.445 & 0.811 \\
-Linear SVM (Hinge) & 86.3\% & 0.432 & 0.439 & 0.435 & 0.371 & 0.794 \\
-Random Forest & 89.2\% & 0.552 & \textbf{0.571} & 0.561 & 0.577 & 0.839 \\
-\textbf{XGBoost} & \textbf{90.3\%} & \textbf{0.613} & 0.532 & \textbf{0.570} & \textbf{0.622} & \textbf{0.865} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.48\textwidth]{e1_pr_curves_all.png}
-\caption{Precision-Recall curves for classical models on the test set. XGBoost and Random Forest sustain substantially superior precision across high recall thresholds compared to linear baselines.}
-\label{fig:e1_pr_curves}
-\end{figure}
-
-Fig.~\ref{fig:e1_pr_curves} presents the Precision-Recall curves. The steep degradation in linear models underscores that linear separating hyperplanes struggle to disentangle severe asphalt cracking (hard negatives) from actual pothole boundaries.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.48\textwidth]{e1_loss_curves.png}
-\caption{Loss-vs-epochs convergence curves. Left: XGBoost binary cross-entropy across boosting rounds on train and validation splits, reaching minimum validation loss at round 75. Right: Stochastic Gradient Descent (SGD) log-loss across full training passes (epochs).}
-\label{fig:e1_loss_curves}
-\end{figure}
-
-\subsection{Loss vs. Epochs Convergence Behavior}
-Fig.~\ref{fig:e1_loss_curves} illustrates the mandatory loss curves. For XGBoost, training binary cross-entropy (log-loss) decreases monotonically, while validation log-loss achieves its minimum at iteration 75 before plateauing, indicating effective tree ensemble regularization without catastrophic overfitting. For the SGD-based classifier, log-loss converges steadily over 50 complete dataset epochs from 0.72 to 0.43 on training data and 0.45 on validation data.
+\textbf{Data.} Table~\ref{tab:data} lists the split sizes and the per-country prevalence. Pothole images are a minority (about 12\% overall), so we treat PR-AUC and recall as the primary metrics. Recall matters most for auditing because a missed pothole is costlier than a false alarm. Prevalence differs strongly between countries, from 2.4\% in the United States to 19.9\% in India, which is central to the cross-country analysis.
 
 \begin{table}[t]
-\caption{Experiment 2: Feature Ablation Study across Models}
-\label{tab:e2_results}
 \centering
-\small
-\begin{tabular}{llrrrr}
+\caption{Dataset partitions and per-country pothole prevalence.}
+\label{tab:data}
+\begin{tabular}{lrrr}
 \toprule
-\textbf{Model} & \textbf{Feature Subset} & \textbf{Dims} & \textbf{F1} & \textbf{Prec.} & \textbf{PR-AUC} \\
+Set & Images & Pothole images & Prevalence \\
 \midrule
-\multirow{4}{*}{Random Forest} 
- & Color Only & 4,105 & 0.492 & 0.649 & 0.546 \\
- & Color + HOG & 10,189 & \textbf{0.514} & 0.757 & 0.583 \\
- & Color + HOG + LBP + GLCM & 10,217 & 0.485 & \textbf{0.758} & \textbf{0.601} \\
- & PCA Reduced & 64 & 0.488 & 0.634 & 0.578 \\
+Train & 10,668 & 1,290 & 12.1\% \\
+Validation & 2,349 & 230 & 9.8\% \\
+Test & 2,323 & 280 & 12.1\% \\
 \midrule
-\multirow{4}{*}{XGBoost} 
- & Color Only & 4,105 & 0.485 & 0.432 & 0.514 \\
- & Color + HOG & 10,189 & \textbf{0.570} & 0.572 & 0.601 \\
- & Color + HOG + LBP + GLCM & 10,217 & 0.564 & \textbf{0.587} & \textbf{0.616} \\
- & PCA Reduced & 64 & 0.519 & 0.432 & 0.550 \\
+India (all) & 7,706 & 1,530 & 19.9\% \\
+Czech Republic (all) & 2,829 & 154 & 5.4\% \\
+United States (all) & 4,805 & 116 & 2.4\% \\
 \midrule
-\multirow{4}{*}{Logistic Reg.} 
- & Color Only & 4,105 & 0.420 & 0.328 & 0.254 \\
- & Color + HOG & 10,189 & \textbf{0.464} & \textbf{0.422} & 0.399 \\
- & Color + HOG + LBP + GLCM & 10,217 & 0.452 & 0.407 & \textbf{0.400} \\
- & PCA Reduced & 64 & 0.394 & 0.268 & 0.475 \\
+Total & 15,340 & 1,800 & 11.7\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Implementation.} Classical models were trained on CPU with scikit-learn and XGBoost (seed 42). ResNet-18 (PyTorch) and YOLOv8n (Ultralytics) were trained on an NVIDIA RTX 4050 Laptop GPU (6~GB). All results in Tables~\ref{tab:main} and~\ref{tab:abl} come from a single run on the same test split; only the cross-country study uses three seeds. The cross-country models use lighter, untuned configurations (100 trees for RF and XGBoost, default decision threshold) so that many scenarios could be run.
+
+%% ------------------------------------------------------------------
+\section{Results and Ablation Studies}
+
+\subsection{In-Distribution Benchmark}
+Table~\ref{tab:main} gives test-set results. Tree ensembles beat the linear models in PR-AUC: XGBoost reaches 0.622 and RF 0.577, against 0.445 for LR and 0.371 for the linear SVM, whereas the F1 scores of XGBoost and RF are within 0.01 of each other. Fig.~\ref{fig:pr} shows that XGBoost dominates the other classical models over most recall levels. With 280 positive test images, the 95\% interval of a recall near 0.57 is about $\pm0.06$, so differences among the classical models in recall and F1 are not statistically meaningful; the PR-AUC gap to the linear models is larger. ResNet-18 improves on all of them (PR-AUC 0.726, F1 0.656, recall 0.657). It finds 184 of the 280 test potholes against 160 for RF, with 97 false alarms against 130, but this is one run on one split without a paired test, so we regard its margin over XGBoost ($+0.10$ PR-AUC) as suggestive.
+
+\begin{table}[t]
+\centering
+\caption{Test-set results (2,323 images, 280 potholes; chance PR-AUC $=0.12$). SVM is linear. Best in bold.}
+\label{tab:main}
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lcccccc}
+\toprule
+Model & Acc. & Prec. & Rec. & F1 & ROC & PR \\
+\midrule
+LR & .847 & .405 & .571 & .474 & .811 & .445 \\
+SVM (linear) & .863 & .432 & .439 & .435 & .794 & .371 \\
+Random Forest & .892 & .552 & .571 & .561 & .839 & .577 \\
+XGBoost & .903 & .613 & .532 & .570 & .865 & .622 \\
+ResNet-18 & \textbf{.917} & \textbf{.655} & \textbf{.657} & \textbf{.656} & \textbf{.904} & \textbf{.726} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.48\textwidth]{e2_feature_ablation.png}
-\caption{Feature ablation performance across models. Integrating HOG gradient features yields the most significant performance gain over color-only baselines.}
-\label{fig:e2_ablation}
-\end{figure}
-
-\subsection{E2: Feature Ablation Study}
-Table~\ref{tab:e2_results} and Fig.~\ref{fig:e2_ablation} detail the multi-modal ablation across four representation subsets. Key observations include:
-\begin{enumerate}
-    \item \textbf{Color alone is insufficient:} Color descriptors achieve an F1 score of only 0.485--0.492. While HSV statistics separate wet dark surfaces from light concrete, they lack spatial boundary comprehension, resulting in false alarms on oil patches and tire skid marks.
-    \item \textbf{HOG gradients drive the largest boost:} Adding HOG features delivers an immediate performance surge: XGBoost F1 increases from 0.4851 to 0.5699 (+0.0848), and Random Forest precision climbs from 0.6491 to 0.7569. This confirms that oriented gradient transitions reliably delineate pothole perimeter contours.
-    \item \textbf{Texture fusion maximizes PR-AUC:} The inclusion of LBP and GLCM yields the highest PR-AUC for both XGBoost (0.6161) and Random Forest (0.6007), capturing subtle pavement aggregate degradation.
-    \item \textbf{PCA compression efficiency:} Reducing the feature space from 10,217 to 64 components (a 99.37\% compression) preserves 91.1\% of XGBoost's full F1 score (0.5193 vs. 0.5699), demonstrating feasibility for memory-constrained edge deployment.
-\end{enumerate}
-
-\subsection{E3: Cross-Domain Generalization Collapse}
-Table~\ref{tab:e3_results} presents cross-domain transfer evaluations across three scenarios, reporting Mean $\pm$ Standard Deviation across three independent random seeds $\{42, 123, 456\}$.
-
-\begin{table}[h]
-\caption{Experiment 3: Cross-Domain Transfer Drop (Mean $\pm$ Std across 3 Seeds)}
-\label{tab:e3_results}
-\centering
-\small
-\begin{tabular}{llrrr}
-\toprule
-\textbf{Scenario} & \textbf{Model} & \textbf{In-Domain F1} & \textbf{Target F1} & \textbf{Transfer Drop ($\Delta$F1)} \\
-\midrule
-\multirow{4}{*}{\shortstack[l]{Czech $\to$ \\ India}} 
- & Logistic Reg. & 0.1709 $\pm$ 0.00 & 0.2756 $\pm$ 0.00 & -0.1047 $\pm$ 0.0038 \\
- & SVM & 0.1712 $\pm$ 0.08 & 0.2494 $\pm$ 0.08 & -0.0782 $\pm$ 0.0754 \\
- & Random Forest & 0.0267 $\pm$ 0.05 & 0.0000 $\pm$ 0.00 & +0.0267 $\pm$ 0.0462 \\
- & XGBoost & 0.1901 $\pm$ 0.04 & 0.0009 $\pm$ 0.00 & \textbf{+0.1892 $\pm$ 0.0417} \\
-\midrule
-\multirow{4}{*}{\shortstack[l]{West $\to$ \\ India}} 
- & Logistic Reg. & 0.0644 $\pm$ 0.06 & 0.1576 $\pm$ 0.06 & -0.0932 $\pm$ 0.0573 \\
- & SVM & 0.1155 $\pm$ 0.04 & 0.2253 $\pm$ 0.04 & -0.1098 $\pm$ 0.0412 \\
- & Random Forest & 0.0218 $\pm$ 0.02 & 0.0000 $\pm$ 0.00 & +0.0218 $\pm$ 0.0195 \\
- & XGBoost & 0.0831 $\pm$ 0.04 & 0.0060 $\pm$ 0.00 & +0.0770 $\pm$ 0.0437 \\
-\midrule
-\multirow{4}{*}{\shortstack[l]{US $\to$ \\ India}} 
- & Logistic Reg. & 0.0131 $\pm$ 0.01 & 0.0877 $\pm$ 0.01 & -0.0746 $\pm$ 0.0080 \\
- & SVM & 0.0465 $\pm$ 0.04 & 0.1639 $\pm$ 0.04 & -0.1174 $\pm$ 0.0384 \\
- & Random Forest & 0.0000 $\pm$ 0.00 & 0.0000 $\pm$ 0.00 & 0.0000 $\pm$ 0.0000 \\
- & XGBoost & 0.0000 $\pm$ 0.00 & 0.0022 $\pm$ 0.00 & -0.0022 $\pm$ 0.0038 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.48\textwidth]{e3_domain_gap.png}
-\caption{Cross-domain generalization drop ($\Delta \text{F1} = \text{F1}_{\text{in}} - \text{F1}_{\text{out}}$) by scenario and model. Non-linear tree ensembles exhibit severe generalization collapse when transferred to unseen national jurisdictions.}
-\label{fig:e3_domain_gap}
-\end{figure}
-
-The empirical findings clearly answer \textit{why cross-domain F1 drops}:
-\begin{quote}
-\textit{Cross-domain performance collapses because asphalt aggregate pigmentation, road surface textures, lane marking schemes, and roadside shadows undergo severe covariate shift across national networks, causing hand-crafted gradients and tree split thresholds fit on one country's pavement to severely misalign with unseen pavement distress.}
-\end{quote}
-As illustrated in Fig.~\ref{fig:e3_domain_gap}, tree ensembles suffer acute generalization collapse ($\Delta \text{F1} = +0.1892$ for XGBoost on Czech $\to$ India), predicting near-zero positive instances because the decision trees overfit to specific source-domain feature thresholds. Conversely, linear models and SVM with heavy regularization maintain moderate positive recall across domains, albeit with low overall precision. Combining diverse Western source domains (Czech + US) partially dampens the drop ($\Delta \text{F1} = +0.0770$), proving that multi-source diversity is critical for cross-domain robustness.
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.48\textwidth]{failure_cases.png}
-\caption{Qualitative error analysis on held-out test frames. Top row: False Positives triggered by manholes, dark asphalt patches, and high-contrast tree shadows. Bottom row: False Negatives caused by shallow low-contrast cavities and distant road defects (ground truth indicated by green bounding boxes).}
-\label{fig:failure_cases}
-\end{figure}
-
-\subsection{Qualitative Error and Failure Mode Analysis}
-Fig.~\ref{fig:failure_cases} provides qualitative insights into typical detector failure modes:
-\begin{itemize}
-    \item \textbf{False Positives (Top Row):} Model false alarms predominantly stem from circular manholes, rectangular drainage grates, expansion joints, freshly laid dark asphalt patches, and sharp tree shadows across the driving lane. Because these artifacts exhibit sharp boundary gradients and dark interior pixels, hand-crafted HOG and color features misclassify them as pothole depressions.
-    \item \textbf{False Negatives (Bottom Row):} Missed potholes primarily occur under two conditions: (1) shallow, low-contrast cavities where the depression lacks a prominent shadowed interior or rim gradient, and (2) small, distant potholes captured far ahead on the horizon where $224 \times 224$ resizing obscures localized boundary detail.
-\end{itemize}
-
-\subsection{E4: Spatial Severity Auditing and Rank Correlation}
-In Experiment 4, we evaluate road segment severity prioritization. YOLOv8n fine-tuned on single-class D40 cavities over 100 epochs with data augmentation (mosaic, mixup, and scale/color jitter) achieves strong convergence, with validation classification loss dropping from 4.880 to 2.118 and detection accuracy reaching a peak validation $\text{mAP}@0.5$ of $0.2718$ (0.271) and $\text{mAP}@[0.5:0.95]$ of $0.0948$ (with Precision $= 0.4210$, Recall $= 0.2749$, and inference latency of only 3.0~ms per frame on an edge RTX 4050 GPU). Evaluating street segments aggregated by $\text{group\_id}$ reveals a remarkably strong, statistically significant Spearman rank correlation coefficient of $\rho = 0.8485$ ($p = 1.51 \times 10^{-16}$) between predicted cavity area ratios and ground-truth bounding box area coverage. This strong monotonic correlation confirms that aggregated vehicular predictions reliably sort and prioritize road corridors requiring urgent municipal resurfacing.
-
-\subsection{E5: Deep CNN Baseline vs. Hand-Crafted Random Forest}
-To investigate the fundamental trade-offs between hand-crafted feature engineering and deep representation learning for vehicular edge auditing, we benchmark the project's primary ensemble classifier---Random Forest ($200$ trees on $10,217$-dimensional multi-modal features)---against the end-to-end ResNet-18 CNN on the exact identical held-out test split ($2,323$ images). Table~\ref{tab:rf_vs_cnn} summarizes the quantitative metrics, computational latency breakdown, and edge deployment throughput.
-
-\begin{table}[ht]
-\caption{Random Forest vs. ResNet-18 Benchmark (Held-Out Test Split, $N = 2,323$)}
-\label{tab:rf_vs_cnn}
-\centering
-\footnotesize
-\begin{tabular}{lrr}
-\toprule
-\textbf{Metric / Attribute} & \textbf{Random Forest} & \textbf{ResNet-18 CNN} \\
-\midrule
-Input Representation & 10,217-dim Hand-Crafted & Raw $224 \times 224$ RGB \\
-Model Size on Disk & \textbf{7.00 MB} & 44.7 MB (Weights) \\
-Feature Extraction & 38.20 ms & \textbf{0.00 ms} \\
-GPU Latency (RTX 4050) & N/A & \textbf{1.95 ms (513 FPS)} \\
-CPU Latency & 23.01 ms & 19.43 ms (51 FPS) \\
-Total Edge Latency & 61.21 ms (16.3 FPS) & \textbf{1.95 ms} \\
-\midrule
-Accuracy & 89.24\% & \textbf{91.69\%} \\
-Precision & 0.5517 (55.17\%) & \textbf{0.6548 (65.48\%)} \\
-Recall (Pothole) & 0.5714 (57.14\%) & \textbf{0.6571 (65.71\%)} \\
-F1-Score (Pothole) & 0.5614 & \textbf{0.6560 (+16.9\%)} \\
-F1-Score (Macro) & 0.7500 & \textbf{0.8044} \\
-ROC-AUC & 0.8391 & \textbf{0.9038} \\
-PR-AUC (Primary Metric) & 0.5768 & \textbf{0.7264 (+25.9\%)} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.48\textwidth]{rf_vs_cnn_tradeoff_comparison.png}
-\caption{Multi-dimensional trade-off comparison between hand-crafted Random Forest and deep ResNet-18. Left: Detection metrics on the held-out test split. Right: Per-image edge processing latency breakdown.}
-\label{fig:rf_vs_cnn_tradeoff}
+\includegraphics[width=0.64\columnwidth]{e1_pr_curves_all.png}
+\caption{Precision--recall curves of the four classical models on the test split (2,323 images). A random ranker would lie at the prevalence, 0.121.}
+\label{fig:pr}
 \end{figure}
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.92\textwidth,height=0.38\textheight,keepaspectratio]{cnn_gradcam_explanations.png}
-\caption{Explainable AI diagnosis via ResNet-18 Grad-CAM. Left to right: Original frame with ground-truth status, Grad-CAM attention overlay with predicted pothole probability, and isolated \texttt{layer4} spatial saliency. Rows 1--3 demonstrate sharp spatial concentration over true pothole cavities (India), while Rows 4--6 demonstrate effective deactivation across severe crack hard negatives (Czech Republic).}
-\label{fig:gradcam_vis}
+\includegraphics[width=0.5\textwidth]{e1_loss_curves.png}
+\caption{Classical training curves. Left: XGBoost training and validation log-loss against boosting rounds. Right: logistic regression trained by SGD, log-loss against epochs.}
+\label{fig:loss}
 \end{figure*}
 
-As illustrated in Table~\ref{tab:rf_vs_cnn} and Fig.~\ref{fig:rf_vs_cnn_tradeoff}, the empirical comparison reveals three critical operational insights:
-\begin{enumerate}
-    \item \textbf{Detection Fidelity and False Alarm Suppression:} ResNet-18 delivers substantial performance gains across all classification metrics, elevating pothole F1 score from 0.5614 to \textbf{0.6560} (+16.9\% relative improvement) and PR-AUC from 0.5768 to \textbf{0.7264} (+25.9\% relative improvement). Crucially, precision increases from 55.17\% to \textbf{65.48\%} (+18.7\% relative gain), indicating that learned deep representations effectively suppress false alarms on transverse and alligator cracks.
-    \item \textbf{Edge Pipeline Latency Bottleneck:} For Random Forest, extracting 10,217 hand-crafted features imposes a severe latency penalty of 38.20~ms per frame, yielding a total edge processing time of 61.21~ms (16.3 FPS on CPU). In contrast, ResNet-18 ingests normalized RGB pixel tensors directly ($0.00$~ms extraction overhead) and completes inference in \textbf{1.95~ms} on an RTX 4050 Laptop GPU (\textbf{513.4 FPS}). Even on CPU hardware, ResNet-18 processes frames in 19.43~ms (51.5 FPS), surpassing Random Forest by 3.1$\times$ on CPU and \textbf{31.4$\times$ on GPU}.
-    \item \textbf{Footprint vs. Capacity Trade-off:} Random Forest retains an advantage in static storage footprint, occupying merely 7.00~MB on disk compared to 44.7~MB for ResNet-18 weights. Consequently, Random Forest is uniquely suited for ultra-low-power microcontrollers lacking hardware matrix accelerators, whereas ResNet-18 is strongly recommended for highway-speed survey fleets ($> 80$~km/h).
-\end{enumerate}
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_deep_curves.pdf}
+\caption{Deep-model training curves. (a) ResNet-18 training and validation weighted-BCE loss. (b) ResNet-18 validation PR-AUC and pothole F1; the dotted line marks the selected checkpoint (epoch 22). (c) YOLOv8n summed box, classification and DFL loss on a log scale; the validation record of epoch 3 is corrupted in the log (sum 0.33) and omitted. (d) YOLOv8n validation mAP, precision and recall.}
+\label{fig:deep}
+\end{figure*}
 
-\subsubsection{Spatial Explainability Comparison: Gini Importance vs. Grad-CAM}
-To evaluate model trust for civil engineering auditing, we contrast the explainability mechanisms of both paradigms. In Random Forest, global Gini impurity reduction reveals that HOG structural gradient bins account for 64.2\% of cumulative decision splits, confirming that edge abruptness dominates classical predictions. However, Gini importance provides no localized frame-level spatial attribution.
+\textbf{Cost.} Computing the 10,217 features takes 38.2~ms per image on CPU and RF inference adds 23.0~ms (61.2~ms in total, 16 frames/s). ResNet-18 needs 19.4~ms per image on the same CPU, about $3\times$ faster, and 1.95~ms on the GPU. The RF model occupies 7~MB, against 44.7~MB for the ResNet-18 weights (11.2~M parameters).
 
-Conversely, Fig.~\ref{fig:gradcam_vis} presents localized Grad-CAM saliency maps from ResNet-18 (\texttt{layer4}). On true pothole instances (\textit{India\_000173}, \textit{India\_000209}, \textit{India\_000274}), the network focuses intensely on the recessed asphalt depressions, yielding high pothole confidence ($P(\text{pothole}) > 0.85$). On severe crack hard negatives (\textit{Czech\_000006}, \textit{Czech\_000020}, \textit{Czech\_000031}) where high-frequency edge gradients frequently deceive HOG, Grad-CAM attention is diffuse or suppressed ($P(\text{pothole}) < 0.20$). This visual evidence demonstrates that deep residual blocks learn 2D depth morphology and interior shadow continuity rather than naive boundary edges.
+\subsection{Training Curves}
+Fig.~\ref{fig:loss} shows the classical training curves. XGBoost's validation log-loss falls to 0.224 by round 198, well below the 0.32 of a constant prediction at the training prevalence, while its training loss reaches 0.077; the gap indicates some overfitting, but validation loss was still decreasing, so more rounds might help. The SGD logistic model (50 epochs) shows the extreme case: training loss falls from 3.9 to 1.7 while validation loss stays between 3.4 and 3.7, far above the 0.69 of a constant 0.5 prediction: the 10,217-dimensional linear model is confidently wrong on unseen sequences.
 
+Fig.~\ref{fig:deep} shows the deep models. For ResNet-18 the training loss drops from 0.92 to 0.026, whereas the validation loss is lowest at epoch 4 (0.673) and then rises to 1.67. Validation PR-AUC nevertheless stays between 0.59 and 0.68 throughout (best 0.684 at epoch 22). Ranking quality therefore remains stable while the predicted probabilities become overconfident, which argues for selecting checkpoints by PR-AUC and calibrating before fixed thresholds are used. YOLOv8n's training and validation losses fall slowly over 100 epochs; validation mAP50 rises steadily and levels off near 0.27 in the last 10 epochs.
+
+
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_lift.pdf}
+\caption{Lift (PR-AUC divided by class prevalence, Eq.~\eqref{eq:lift}) for three source$\rightarrow$India scenarios. Light bars: in-domain test split of the source countries; hatched bars: all 7,706 India images. Bars show the mean and error bars the standard deviation over three seeds; the dashed line is chance ($L=1$). Prevalence is computed per country: 3.5\% (US+Czech), 5.4\% (Czech), 2.4\% (US) and 19.9\% (India).}
+\label{fig:lift}
+\end{figure*}
+
+\subsection{Feature Ablation}
+Table~\ref{tab:abl} adds descriptors cumulatively. Moving from colour alone to colour plus HOG raises XGBoost F1 from 0.485 to 0.570 and PR-AUC from 0.514 to 0.601, and RF F1 from 0.492 to 0.514 and PR-AUC from 0.546 to 0.583, making HOG the most useful addition. Adding LBP and GLCM (28 extra dimensions) increases PR-AUC slightly ($+0.016$ and $+0.017$) but changes F1 by $-0.006$ and $-0.029$, differences within test-set noise, so we do not claim a benefit from texture features. Reducing the full vector to 64 PCA components (99.4\% fewer dimensions) keeps 89\% (XGBoost) and 96\% (RF) of the full-set PR-AUC. Two caveats apply. First, the sets are nested, so the effect of HOG alone is not isolated. Second, colour alone already reaches a PR-AUC of 0.51--0.55, about $4\times$ chance. Since India contributes most pothole images and looks different from the other countries, part of this may reflect country appearance rather than potholes, which motivates the cross-country test below.
+
+\begin{table}[t]
+\centering
+\caption{Cumulative feature ablation on the test split (single run).}
+\label{tab:abl}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrcccc}
+\toprule
+ & & \multicolumn{2}{c}{XGBoost} & \multicolumn{2}{c}{Random Forest} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+Features & Dim. & F1 & PR-AUC & F1 & PR-AUC \\
+\midrule
+Colour & 4,105 & .485 & .514 & .492 & .546 \\
++ HOG & 10,189 & \textbf{.570} & .601 & \textbf{.514} & .583 \\
++ LBP + GLCM & 10,217 & .564 & \textbf{.616} & .485 & \textbf{.601} \\
+PCA of full set & 64 & .519 & .550 & .488 & .578 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{fig_audit.pdf}
+\caption{Severity audit on the 56 test segments. (a) Predicted against ground-truth segment severity (mean fraction of image area covered by pothole boxes), coloured by country; most Czech and US segments lie at the origin. The dashed line is $y=x$. (b) Spearman correlation pooled over all segments and within each country.}
+\label{fig:audit}
+\end{figure*}
+
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{fig_qualitative.jpg}
+\caption{Qualitative results on the same six images. Top: YOLOv8n bounding-box predictions after 100 epochs (confidence threshold 0.20), with the number of boxes and their confidences. Bottom: Grad-CAM of the selected ResNet-18 checkpoint (last convolutional block) with the predicted pothole probability. (a)--(c) Indian images containing potholes; (d)--(f) Czech images containing cracks but no potholes. These are selected examples, not a random sample.}
+\label{fig:qual}
+\end{figure*}
+
+\subsection{Cross-Country Generalization}
+Table~\ref{tab:cross} reports training on US and Czech images and testing in-domain and on India; Fig.~\ref{fig:lift} shows the lift for all three source sets. At the default threshold, F1 gives a confusing picture. RF and XGBoost obtain a near-zero F1 on India because they predict almost no positives, while LR and the SVM obtain a \emph{higher} F1 on India than in-domain. The latter is an artefact of prevalence: India has 19.9\% pothole images against 3.5\% in the US and Czech data, so even a weak classifier that flags many images attains a higher F1 there.
+
+Lift removes this effect. In-domain, the classical models rank potholes 1.2 to 3.9 times better than chance (3.2 for XGBoost and 3.0 for RF when trained on US and Czech images). On India, every model falls to a lift between 1.02 and 1.39: the linear models are at chance (1.02--1.11), and the tree ensembles keep only a small part of their advantage (1.06--1.39). The in-domain estimates are noisy, because the source test sets contain only about 25 to 55 pothole images, but the drop on India appears for all three source sets and all three seeds.
+
+\begin{table}[t]
+\centering
+\caption{Training on US$+$Czech, testing in-domain and on India (mean $\pm$ std over 3 seeds). Chance PR-AUC is 0.035 in-domain and 0.199 on India.}
+\label{tab:cross}
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{F1 (default thr.)} & \multicolumn{2}{c}{PR-AUC} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Model & In-domain & India & In-domain & India \\
+\midrule
+LR & .064$\pm$.030 & .158$\pm$.087 & .062$\pm$.012 & .216$\pm$.014 \\
+SVM & .116$\pm$.020 & .225$\pm$.039 & .049$\pm$.005 & .214$\pm$.007 \\
+RF & .022$\pm$.020 & .000$\pm$.000 & .104$\pm$.002 & .243$\pm$.019 \\
+XGBoost & .083$\pm$.042 & .006$\pm$.002 & .114$\pm$.019 & .276$\pm$.030 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+Because ResNet-18 was trained on the pooled split, which includes India, we did not evaluate it across countries, and we make no claim that deep features transfer better; this is the most important open experiment (Section~\ref{sec:disc}). The bottom row of Fig.~\ref{fig:qual} hints at why this matters. On the Indian pothole images, ResNet-18 attends broadly to the road ahead, but in Fig.~\ref{fig:qual}(c) the peak of the map lies on a truck rather than on the pothole that the detector boxes. On the Czech crack-only images, which it correctly rejects, the strongest activation lies on the sky, a building or the bonnet rather than on the cracks. This does not show that the network ignores the road, but it does not rule out that scene context, which differs by country, contributes to its decisions.
+
+
+
+\subsection{Severity Audit}
+YOLOv8n reaches a validation precision of 0.42, recall of 0.27, mAP50 of 0.271 and mAP50--95 of 0.095 after 100 epochs. The top row of Fig.~\ref{fig:qual} shows typical boxes. On clearly damaged Indian roads the detector localizes individual potholes, including several in one frame, and it predicts no boxes on Czech images that contain only cracks. However, all boxes in these examples have confidences between 0.20 and 0.24, barely above the 0.20 threshold, and in Fig.~\ref{fig:qual}(a) two overlapping boxes cover a large part of the road surface. The area of such boxes feeds directly into the severity score of Eq.~\eqref{eq:sev}, so both missed potholes and oversized boxes affect the audit. Over the 56 test segments, the pooled Spearman correlation between predicted and ground-truth segment severity is 0.848 ($p<10^{-15}$; Fig.~\ref{fig:audit}). This number is inflated by differences between countries. India segments have about 25 to 120 times the mean ground-truth severity of Czech and US segments, so a model that merely separated countries would already score highly. Within a country the correlation is 0.64 for India ($n=31$, $p=1.1\times10^{-4}$), 0.52 for the Czech Republic ($n=13$, $p=0.07$) and 0.13 for the United States ($n=12$, $p=0.68$). The detector also underestimates severity (mean 0.56\% against 0.96\% of image area in India) and predicts zero severity for 22 of the 25 Czech and US segments, consistent with its recall of 0.27. The ranking is usable for coarse triage on roads like the training data, but it is not yet a reliable audit.
+
+
+\subsection{Discussion and Limitations}\label{sec:disc}
+\textbf{(1)} The in-distribution scores are probably dominated by India, which provides most pothole images; we did not report per-country test metrics. \textbf{(2)} The cross-country models differ from the in-distribution ones (untuned, default threshold), the source test sets are small, and the prevalence used for the lift is computed on whole countries, not on each seed's test portion. \textbf{(3)} The SVM is linear, XGBoost is not tuned, and all single-split results lack confidence intervals or paired tests. \textbf{(4)} Groups are filename blocks, so residual leakage between neighbouring blocks is possible, which would favour all in-distribution numbers. \textbf{(5)} Whole-image classification on $224\times224$ inputs is a coarse task, because potholes cover only a small part of the frame (on average under 0.1\% of the image area in Czech and US segments and about 1\% in India); we did not test patch-level features. \textbf{(6)} Only three of the RDD2022 countries were used.
+
+%% ------------------------------------------------------------------
 \section{Conclusion}
-In this work, we developed and benchmarked an automated road pothole detection and infrastructure auditing framework utilizing 15,340 multi-national images from RDD2022. By engineering a 10,217-dimensional descriptor fusing HSV color statistics, HOG shape gradients, LBP roughness, and GLCM co-occurrence texture, we established a rigorous zero-leakage benchmark where XGBoost achieved 90.31\% accuracy and 0.6218 PR-AUC, with a tri-model ensemble further elevating PR-AUC to 0.6223. Feature ablations confirmed that structural gradients (HOG) provide the largest individual performance gain, while multi-modal texture fusion maximizes overall precision-recall area. Furthermore, our head-to-head empirical comparison with an end-to-end ResNet-18 deep baseline demonstrated that deep representation learning overcomes the feature extraction latency bottleneck, delivering a 16.9\% boost in pothole F1 score (0.6560), a 25.9\% gain in PR-AUC (0.7264), and a 31.4$\times$ acceleration in edge processing throughput (513.4 FPS vs. 16.3 FPS), with Grad-CAM confirming spatial attention on asphalt depressions over crack confounders. Crucially, our cross-domain evaluations revealed severe generalization collapse ($\Delta \text{F1}$ up to 0.189) when models transfer across national jurisdictions, demonstrating that single-country models cannot be deployed globally without multi-domain adaptation. Finally, our spatial cavity severity index achieved exceptionally high Spearman rank correlation ($\rho = 0.8485$, $p = 1.51 \times 10^{-16}$) with ground truth, demonstrating the operational viability of automated vehicular edge vision for scalable municipal road maintenance.
+On RDD2022, a fine-tuned ResNet-18 ranked pothole images better than four classical models on a grouped held-out split (PR-AUC 0.73 against 0.62 for XGBoost), and HOG gradients were the most useful hand-crafted cue. The main finding is negative: classical pipelines that beat chance by a factor of up to 3.9 in-domain fall to between 1.0 and 1.4 times chance on a country they were not trained on. This loss is invisible in accuracy and fixed-threshold F1 and becomes visible once PR-AUC is normalized by prevalence. Likewise, a pooled severity correlation of 0.85 shrinks to 0.13--0.64 within a country. Future work should (i) evaluate the CNN and the detector across countries, (ii) report per-country metrics with confidence intervals, (iii) test patch-level features and domain adaptation~\cite{ganin2016domain}, and (iv) validate the severity score against measured pothole size or repair cost. Code and result tables are available at \url{https://github.com/Paraspandey-debugs/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing}.
 
 \begin{thebibliography}{00}
-\bibitem{koch2015review} C. Koch, K. Georgieva, V. Kasireddy, B. Akinci, and P. Fieguth, ``A review on computer vision based defect detection and condition assessment of concrete and asphalt civil infrastructure,'' \textit{Advanced Engineering Informatics}, vol. 29, no. 2, pp. 196--210, 2015.
-\bibitem{fan2020pothole} R. Fan, U. Ozgunalp, B. Hosking, M. Liu, and I. Pitas, ``Pothole detection based on disparity transformation and road surface modeling,'' \textit{IEEE Transactions on Image Processing}, vol. 29, pp. 897--908, 2020.
-\bibitem{dalal2005hog} N. Dalal and B. Triggs, ``Histograms of oriented gradients for human detection,'' in \textit{IEEE Computer Society Conference on Computer Vision and Pattern Recognition (CVPR)}, vol. 1, 2005, pp. 886--893.
-\bibitem{ojala2002lbp} T. Ojala, M. Pietik{\"a}inen, and T. M{\"a}enp{\"a}{\"a}, ``Multiresolution gray-scale and rotation invariant texture classification with local binary patterns,'' \textit{IEEE Transactions on Pattern Analysis and Machine Intelligence}, vol. 24, no. 7, pp. 971--987, 2002.
-\bibitem{haralick1973glcm} R. M. Haralick, K. Shanmugam, and I. Dinstein, ``Textural features for image classification,'' \textit{IEEE Transactions on Systems, Man, and Cybernetics}, vol. SMC-3, no. 6, pp. 610--621, 1973.
-\bibitem{chen2016xgboost} T. Chen and C. Guestrin, ``XGBoost: A scalable tree boosting system,'' in \textit{ACM SIGKDD International Conference on Knowledge Discovery and Data Mining (KDD)}, 2016, pp. 785--794.
-\bibitem{arya2022rdd2022} D. Arya, H. Maeda, S. K. Ghosh, D. Toshniwal, and Y. Sekimoto, ``RDD2022: A multi-national image dataset for automatic road damage detection,'' \textit{Scientific Data (Nature)}, vol. 9, no. 1, p. 764, 2022.
-\bibitem{bendavid2010domain} S. Ben-David, J. Blitzer, K. Crammer, A. Kulesza, F. Pereira, and J. W. Vaughan, ``A theory of learning from different domains,'' \textit{Machine Learning}, vol. 79, no. 1, pp. 151--175, 2010.
-\bibitem{jocher2023yolo} G. Jocher, A. Chaurasia, and J. Qiu, ``Ultralytics YOLOv8,'' 2023. [Online]. Available: https://github.com/ultralytics/ultralytics
-\bibitem{he2016resnet} K. He, X. Zhang, S. Ren, and J. Sun, ``Deep residual learning for image recognition,'' in \textit{IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, 2016, pp. 770--778.
-\bibitem{selvaraju2017gradcam} R. R. Selvaraju, M. Cogswell, A. Das, R. Vedantam, D. Parikh, and D. Batra, ``Grad-CAM: Visual explanations from deep networks via gradient-based localization,'' in \textit{IEEE International Conference on Computer Vision (ICCV)}, 2017, pp. 618--626.
+\bibitem{koch2011pothole} C. Koch and I. Brilakis, ``Pothole detection in asphalt pavement images,'' \textit{Adv. Eng. Informat.}, vol. 25, no. 3, pp. 507--515, 2011.
+\bibitem{koch2015review} C. Koch, K. Georgieva, V. Kasireddy, B. Akinci, and P. Fieguth, ``A review on computer vision based defect detection and condition assessment of concrete and asphalt civil infrastructure,'' \textit{Adv. Eng. Informat.}, vol. 29, no. 2, pp. 196--210, 2015.
+\bibitem{fan2020pothole} R. Fan, U. Ozgunalp, B. Hosking, M. Liu, and I. Pitas, ``Pothole detection based on disparity transformation and road surface modeling,'' \textit{IEEE Trans. Image Process.}, vol. 29, pp. 897--908, 2020.
+\bibitem{dalal2005hog} N. Dalal and B. Triggs, ``Histograms of oriented gradients for human detection,'' in \textit{Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR)}, 2005, vol. 1, pp. 886--893.
+\bibitem{ojala2002lbp} T. Ojala, M. Pietik{\"a}inen, and T. M{\"a}enp{\"a}{\"a}, ``Multiresolution gray-scale and rotation invariant texture classification with local binary patterns,'' \textit{IEEE Trans. Pattern Anal. Mach. Intell.}, vol. 24, no. 7, pp. 971--987, 2002.
+\bibitem{haralick1973glcm} R. M. Haralick, K. Shanmugam, and I. Dinstein, ``Textural features for image classification,'' \textit{IEEE Trans. Syst., Man, Cybern.}, vol. SMC-3, no. 6, pp. 610--621, 1973.
+\bibitem{cortes1995svm} C. Cortes and V. Vapnik, ``Support-vector networks,'' \textit{Mach. Learn.}, vol. 20, no. 3, pp. 273--297, 1995.
+\bibitem{breiman2001random} L. Breiman, ``Random forests,'' \textit{Mach. Learn.}, vol. 45, no. 1, pp. 5--32, 2001.
+\bibitem{chen2016xgboost} T. Chen and C. Guestrin, ``XGBoost: A scalable tree boosting system,'' in \textit{Proc. 22nd ACM SIGKDD Int. Conf. Knowl. Discov. Data Min.}, 2016, pp. 785--794.
+\bibitem{maeda2018road} H. Maeda, Y. Sekimoto, T. Seto, T. Kashiyama, and H. Omata, ``Road damage detection and classification using deep neural networks with smartphone images,'' \textit{Comput.-Aided Civ. Infrastruct. Eng.}, vol. 33, no. 12, pp. 1127--1141, 2018.
+\bibitem{arya2022rdd2022} D. Arya, H. Maeda, S. K. Ghosh, D. Toshniwal, and Y. Sekimoto, ``RDD2022: A multi-national image dataset for automatic road damage detection,'' 2022, arXiv:2209.08538.
+\bibitem{arya2021deep} D. Arya, H. Maeda, S. K. Ghosh, D. Toshniwal, A. Mraz, T. Kashiyama, and Y. Sekimoto, ``Deep learning-based road damage detection and classification for multiple countries,'' \textit{Autom. Constr.}, vol. 132, Art. no. 103935, 2021.
+\bibitem{redmon2016yolo} J. Redmon, S. Divvala, R. Girshick, and A. Farhadi, ``You only look once: Unified, real-time object detection,'' in \textit{Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR)}, 2016, pp. 779--788.
+\bibitem{jocher2023yolo} G. Jocher, A. Chaurasia, and J. Qiu, ``Ultralytics YOLOv8,'' 2023. [Online]. Available: \url{https://github.com/ultralytics/ultralytics}
+\bibitem{torralba2011bias} A. Torralba and A. A. Efros, ``Unbiased look at dataset bias,'' in \textit{Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR)}, 2011, pp. 1521--1528.
+\bibitem{bendavid2010domain} S. Ben-David, J. Blitzer, K. Crammer, A. Kulesza, F. Pereira, and J. W. Vaughan, ``A theory of learning from different domains,'' \textit{Mach. Learn.}, vol. 79, no. 1--2, pp. 151--175, 2010.
+\bibitem{saito2015precision} T. Saito and M. Rehmsmeier, ``The precision-recall plot is more informative than the ROC plot when evaluating binary classifiers on imbalanced datasets,'' \textit{PLoS ONE}, vol. 10, no. 3, Art. no. e0118432, 2015.
+\bibitem{pedregosa2011scikit} F. Pedregosa \textit{et al.}, ``Scikit-learn: Machine learning in Python,'' \textit{J. Mach. Learn. Res.}, vol. 12, pp. 2825--2830, 2011.
+\bibitem{he2016resnet} K. He, X. Zhang, S. Ren, and J. Sun, ``Deep residual learning for image recognition,'' in \textit{Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR)}, 2016, pp. 770--778.
+\bibitem{deng2009imagenet} J. Deng, W. Dong, R. Socher, L.-J. Li, K. Li, and L. Fei-Fei, ``ImageNet: A large-scale hierarchical image database,'' in \textit{Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR)}, 2009, pp. 248--255.
+\bibitem{loshchilov2019decoupled} I. Loshchilov and F. Hutter, ``Decoupled weight decay regularization,'' in \textit{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2019.
+\bibitem{selvaraju2017gradcam} R. R. Selvaraju, M. Cogswell, A. Das, R. Vedantam, D. Parikh, and D. Batra, ``Grad-CAM: Visual explanations from deep networks via gradient-based localization,'' in \textit{Proc. IEEE Int. Conf. Comput. Vis. (ICCV)}, 2017, pp. 618--626.
+\bibitem{ganin2016domain} Y. Ganin, E. Ustinova, H. Ajakan, P. Germain, H. Larochelle, F. Laviolette, M. Marchand, and V. Lempitsky, ``Domain-adversarial training of neural networks,'' \textit{J. Mach. Learn. Res.}, vol. 17, no. 59, pp. 1--35, 2016.
 \end{thebibliography}
 
 \end{document}

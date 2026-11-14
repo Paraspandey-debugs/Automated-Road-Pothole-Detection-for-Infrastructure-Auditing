@@ -489,10 +489,11 @@
 
 
 
-% The IEEE uses Times Roman font, so we'll default to Times when available.
-%\renewcommand{\sfdefault}{phv}
-%\renewcommand{\rmdefault}{ptm}
-%\renewcommand{\ttdefault}{pcr}
+% The IEEE uses Times Roman font, so we'll default to Times.
+% These three commands make up the entire times.sty package.
+\renewcommand{\sfdefault}{phv}
+\renewcommand{\rmdefault}{ptm}
+\renewcommand{\ttdefault}{pcr}
 
 % V1.7 compsoc nonconference papers, use Palatino/Palladio as the main text font,
 % not Times Roman.
