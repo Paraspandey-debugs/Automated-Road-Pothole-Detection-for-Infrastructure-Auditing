@@ -11,19 +11,24 @@ An end-to-end computer vision and machine learning framework for automated road 
 
 ## 📌 Framework Overview
 
-Municipal pavement auditing traditionally depends on manual visual surveys or expensive laser profilometers. This project establishes an automated, reproducible inspection pipeline combining **multi-modal hand-crafted feature fusion** (Color, HOG, LBP, GLCM) and **YOLOv8 deep representations** for segment-level road severity prioritization:
+Municipal pavement auditing traditionally depends on manual visual surveys or expensive laser profilometers. This project establishes an automated, reproducible inspection pipeline combining **multi-modal hand-crafted feature fusion** (Color, HOG, LBP, GLCM) and **deep representations (ResNet-18, YOLOv8)** for segment-level road severity prioritization:
 
 1. **Zero-Leakage Group Splitting:** Sequence-aware partitioning by 50-frame contiguous blocks to eliminate spatial/temporal leakage across train, validation, and test splits.
 2. **10,217-Dimensional Multi-Modal Feature Extraction:** Fusing HSV color moments, 3D histograms, structural HOG gradients, LBP surface roughness, and Haralick GLCM co-occurrence texture.
-3. **Classical ML Benchmark (E1):** Evaluating Logistic Regression, SVM, Random Forest, XGBoost, and a soft-voting ensemble under group-stratified cross-validation.
+3. **Classical ML Benchmark (E1):** Evaluating Logistic Regression, Linear SVM, Random Forest, and XGBoost under group-stratified cross-validation.
 4. **Feature Ablations & Cross-Domain Transfer (E2 & E3):** Quantifying descriptor marginal gains and measuring cross-domain generalization collapse across national road networks (Czech Republic, India, USA).
-5. **Spatial Severity Auditing (E4):** Fine-tuning YOLOv8n to compute cavity area ratios and establishing rank correlation ($\rho = 0.8485$) with ground-truth segment deterioration.
+5. **Spatial Severity Auditing (E4):** Fine-tuning YOLOv8n over 100 epochs to compute cavity area ratios and establishing rank correlation ($\rho = 0.8485$) with ground-truth segment deterioration.
+6. **Deep CNN Baseline & Explainability (E5):** End-to-end ResNet-18 benchmark directly compared against Random Forest with Grad-CAM spatial heatmaps.
+
+<p align="center">
+  <img src="results/figures/pipeline_architecture.png" alt="Pipeline Architecture" width="95%"/>
+</p>
 
 ---
 
 ## 📊 Summary of Experimental Results
 
-### Classical Model Benchmark (Test Split: 2,323 images)
+### 1. Classical Model Benchmark (Test Split: 2,323 images)
 | Model | Accuracy | Precision | Recall | F1 Pothole | F1 Macro | ROC-AUC | PR-AUC |
 |---|---|---|---|---|---|---|---|
 | **Logistic Regression** | 84.72% | 0.4051 | 0.5714 | 0.4741 | 0.6923 | 0.8112 | 0.4445 |
@@ -31,7 +36,12 @@ Municipal pavement auditing traditionally depends on manual visual surveys or ex
 | **Random Forest** | 89.24% | 0.5517 | 0.5714 | 0.5614 | 0.7500 | 0.8391 | 0.5768 |
 | **XGBoost (Best Single)** | **90.31%** | **0.6132** | 0.5321 | **0.5698** | **0.7576** | **0.8646** | **0.6218** |
 
-### Head-to-Head Comparison: Random Forest vs. ResNet-18 Deep Baseline
+<p align="center">
+  <img src="results/figures/e1_pr_curves_all.png" width="48%" alt="PR Curves All Models"/>
+  <img src="results/figures/e1_loss_curves.png" width="48%" alt="Convergence Loss Curves"/>
+</p>
+
+### 2. Head-to-Head Comparison: Random Forest vs. ResNet-18 Deep Baseline
 | Metric / Characteristic | Hand-Crafted Random Forest | Deep ResNet-18 Baseline | Relative Difference ($\Delta$) |
 |---|---|---|---|
 | **Input Representation** | 10,217-dim Hand-Crafted (HOG+LBP+GLCM+HSV) | Raw $224 \times 224$ RGB Pixels | End-to-End Representation |
@@ -46,12 +56,42 @@ Municipal pavement auditing traditionally depends on manual visual surveys or ex
 | **ROC-AUC** | 0.8391 | **0.9038** | +7.7% relative (+0.0647) |
 | **PR-AUC (Primary Metric)**| 0.5768 | **0.7264** | **+25.9% relative (+0.1496)** |
 
-### YOLOv8n Detection & Infrastructure Severity Audit (100 Epochs)
+<p align="center">
+  <img src="results/figures/rf_vs_cnn_pr_curves.png" width="48%" alt="RF vs CNN PR Curves"/>
+  <img src="results/figures/rf_vs_cnn_tradeoff_comparison.png" width="48%" alt="RF vs CNN Tradeoff Comparison"/>
+</p>
+
+#### Explainable AI: Grad-CAM Visual Saliency
+Grad-CAM heatmaps from ResNet-18 (`layer4`) confirm that deep convolutional representations localize intensely on asphalt cavity volume loss while suppressing confusing crack hard negatives:
+<p align="center">
+  <img src="results/figures/cnn_gradcam_explanations.png" width="95%" alt="Grad-CAM Explainability Diagnosis"/>
+</p>
+
+### 3. YOLOv8n Detection & Infrastructure Severity Audit (100 Epochs)
 - **Validation mAP@0.5:** **0.2718 (0.271)** (Up from 0.1152 in baseline, **+135.9% gain**)
 - **Validation mAP@0.5:0.95:** **0.0948** (Up from 0.0388, **+144.3% gain**)
 - **Precision / Recall:** **0.4210** / **0.2749**
 - **Inference Latency:** **3.0 ms / frame** on RTX 4050 GPU (~330 FPS)
 - **Infrastructure Audit Spearman Rank Correlation:** **$\rho = 0.8485$** ($p = 1.51 \times 10^{-16}$)
+
+<p align="center">
+  <img src="results/figures/yolo100_pothole_vs_crack_inference.png" width="95%" alt="YOLOv8 100-Epoch Detection & Crack Verification"/>
+</p>
+
+<p align="center">
+  <img src="results/figures/e4_severity_ranking_correlation.png" width="55%" alt="Severity Ranking Correlation"/>
+</p>
+
+### 4. Feature Ablations & Cross-Domain Generalization (E2 & E3)
+<p align="center">
+  <img src="results/figures/e2_feature_ablation.png" width="48%" alt="Feature Ablation"/>
+  <img src="results/figures/e3_domain_gap.png" width="48%" alt="Cross-Domain Generalization Drop"/>
+</p>
+
+#### Qualitative Failure Analysis
+<p align="center">
+  <img src="results/figures/failure_cases.png" width="90%" alt="Qualitative Failure Analysis"/>
+</p>
 
 ---
 
