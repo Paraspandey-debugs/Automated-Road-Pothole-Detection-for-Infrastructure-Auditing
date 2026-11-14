@@ -1,0 +1,13 @@
+model,feature_set,description,num_dimensions,f1_pothole,precision,recall,pr_auc
+Random_Forest,color_only,Color Only (HSV Stats & Hist),4105,0.4922,0.6491,0.3964,0.5459
+Random_Forest,color_hog,Color + HOG (Gradients),10189,0.5142,0.7569,0.3893,0.5833
+Random_Forest,color_hog_lbp_glcm,Color + HOG + LBP + GLCM (Full),10217,0.4854,0.7576,0.3571,0.6007
+Random_Forest,pca_64,PCA Reduced (64 dims),64,0.4879,0.6343,0.3964,0.5778
+XGBoost,color_only,Color Only (HSV Stats & Hist),4105,0.4851,0.4318,0.5536,0.5139
+XGBoost,color_hog,Color + HOG (Gradients),10189,0.5699,0.5719,0.5679,0.6005
+XGBoost,color_hog_lbp_glcm,Color + HOG + LBP + GLCM (Full),10217,0.564,0.5869,0.5429,0.6161
+XGBoost,pca_64,PCA Reduced (64 dims),64,0.5193,0.4323,0.65,0.5502
+Logistic_Regression,color_only,Color Only (HSV Stats & Hist),4105,0.4196,0.328,0.5821,0.254
+Logistic_Regression,color_hog,Color + HOG (Gradients),10189,0.4638,0.4223,0.5143,0.3988
+Logistic_Regression,color_hog_lbp_glcm,Color + HOG + LBP + GLCM (Full),10217,0.4515,0.4069,0.5071,0.3995
+Logistic_Regression,pca_64,PCA Reduced (64 dims),64,0.394,0.2676,0.7464,0.4745

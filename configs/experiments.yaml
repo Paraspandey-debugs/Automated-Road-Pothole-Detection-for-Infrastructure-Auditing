@@ -55,6 +55,9 @@ e3:
     - name: "us_to_india"
       train_countries: ["US"]
       test_country: "India"
+    - name: "czech_to_india"
+      train_countries: ["Czech"]
+      test_country: "India"
     - name: "rdd_to_external"
       train_countries: ["Japan", "US", "Czech", "India"]
       test_country: "external"

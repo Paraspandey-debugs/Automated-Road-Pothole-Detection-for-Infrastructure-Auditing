@@ -1,35 +1,108 @@
+# ==============================================================================
 # Byte-compiled / optimized / DLL files
+# ==============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 
-# Virtual environments
+# ==============================================================================
+# Virtual Environments & Packaging
+# ==============================================================================
 .env
 .venv
 env/
 venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Datasets and raw archives
+# ==============================================================================
+# Datasets, Raw Archives & Generated Annotations
+# ==============================================================================
 /data/
 *.zip
 *.tar
 *.tar.gz
+*.tgz
+*.7z
+labels.csv
 
-# Interim cached features and models
+# ==============================================================================
+# Interim Cached Features, Arrays & Trained Model Weights
+# ==============================================================================
 *.npy
 *.npz
 *.pkl
 *.joblib
 *.pt
+*.pth
 *.onnx
+*.weights
+*.safetensors
+*.engine
+weights/
 
-# YOLO runs, logs, checkpoints
+# ==============================================================================
+# Experiment Tracking, Runs, Logs & Checkpoints
+# ==============================================================================
 runs/
 results/models/
+results/errors/
 *.log
 wandb/
+.comet/
+mlruns/
+lightning_logs/
 
-# System / IDE
+# ==============================================================================
+# LaTeX Build Artifacts
+# ==============================================================================
+*.aux
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex
+*.toc
+*.out
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+missfont.log
+
+# ==============================================================================
+# System, IDE & Editor Temporary Files
+# ==============================================================================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
+.directory
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/

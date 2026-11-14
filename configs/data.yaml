@@ -1,6 +1,6 @@
 # YOLOv8 Object Detection Dataset Configuration
 # Relative to repository root or absolute paths
-path: data/yolo
+path: /home/hyperghost/github/Automated-Road-Pothole-Detection-for-Infrastructure-Auditing/data/yolo
 train: splits/train.txt
 val: splits/val.txt
 test: splits/test.txt

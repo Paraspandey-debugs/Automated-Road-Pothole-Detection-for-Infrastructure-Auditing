@@ -1,5 +1,6 @@
 .PHONY: help install clean data yolo labels splits feats e1 e2 e3 e4 all
 
+export PYTHONPATH := .
 PYTHON ?= python3
 
 help:
@@ -47,7 +48,10 @@ e3:
 e4:
 	$(PYTHON) experiments/e4_audit.py --train
 
-all: data yolo labels splits feats e1 e2 e3 e4
+failure:
+	$(PYTHON) experiments/failure_cases.py
+
+all: data yolo labels splits feats e1 e2 e3 failure e4
 	@echo "Complete pothole audit pipeline finished successfully!"
 
 clean:

@@ -16,8 +16,12 @@ Usage:
 import argparse
 import logging
 import multiprocessing as mp
+import sys
 from pathlib import Path
 from typing import Dict, Optional, Tuple
+
+# Ensure repository root is in sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import cv2
 import joblib
@@ -123,10 +127,13 @@ def main() -> None:
 
         np.save(args.out_dir / "X_train.npy", X_train)
         np.save(args.out_dir / "y_train.npy", y_all[train_mask])
+        np.save(args.out_dir / "groups_train.npy", df_aligned.loc[train_mask, "group_id"].values)
         np.save(args.out_dir / "X_val.npy", X_val)
         np.save(args.out_dir / "y_val.npy", y_all[val_mask])
+        np.save(args.out_dir / "groups_val.npy", df_aligned.loc[val_mask, "group_id"].values)
         np.save(args.out_dir / "X_test.npy", X_test)
         np.save(args.out_dir / "y_test.npy", y_all[test_mask])
+        np.save(args.out_dir / "groups_test.npy", df_aligned.loc[test_mask, "group_id"].values)
         joblib.dump(scaler, args.out_dir / "scaler.pkl")
         log.info("Fitted and saved StandardScaler on train split.")
 

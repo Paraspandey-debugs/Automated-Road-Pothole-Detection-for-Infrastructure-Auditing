@@ -53,11 +53,7 @@ def extract_group_id(filename: str, country: str) -> str:
     """
     stem = Path(filename).stem
 
-    match_alpha = re.match(r"^([a-zA-Z]+[-_][a-zA-Z]+)", stem)
-    if match_alpha:
-        return match_alpha.group(1)
-
-    match_country_idx = re.match(r"^([a-zA-Z]+)_?(\d+)", stem)
+    match_country_idx = re.match(r"^([a-zA-Z_\-]+?)_?(\d+)$", stem)
     if match_country_idx:
         prefix, num_str = match_country_idx.groups()
         try:
@@ -65,6 +61,10 @@ def extract_group_id(filename: str, country: str) -> str:
             return f"{prefix}_seq_{seq_block:04d}"
         except ValueError:
             return prefix
+
+    match_alpha = re.match(r"^([a-zA-Z]+[-_][a-zA-Z]+)", stem)
+    if match_alpha:
+        return match_alpha.group(1)
 
     return country
 
